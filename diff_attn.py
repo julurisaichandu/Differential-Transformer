@@ -20,3 +20,20 @@ class DifferentialAttention(nn.Module):
         # introducing the Lamda Parameters
 
         self.lambda_q1 = nn.Parameter(torch.zeros(d_head))
+        self.lambda_k1 = nn.Parameter(torch.zeros(d_head))
+
+        self.lambda_q2 = nn.Parameter(torch.zeros(d_head))
+        self.lambda_k2 = nn.Parameter(torch.zeros(d_head))
+
+        self.lambda_init = 0.8
+
+        self.dropout = nn.Dropout(dropout)
+        self.group_norm = nn.GroupNorm(n_heads, d_head * n_heads)
+
+
+    def compute_lambda(self):
+        lambda_val = (torch.exp(self.lambda_q1 * self.lambda_k1) -
+                     torch.exp(self.lambda_q2 * self.lambda_k2) +
+                     self.lambda_init)
+
+        return lambda_val
