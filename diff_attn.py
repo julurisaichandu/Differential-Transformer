@@ -31,7 +31,8 @@ class DifferentialAttention(nn.Module):
         lambda_val = (torch.exp(self.lambda_q1 * self.lambda_k1) -
                       torch.exp(self.lambda_q2 * self.lambda_k2) +
                       self.lambda_init)
-        return lambda_val
+        # Reshape for broadcasting
+        return lambda_val.view(1, 1, 1, -1)
 
     def forward(self, x, mask=None):
         batch_size, seq_len, _ = x.shape
