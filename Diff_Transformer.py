@@ -32,6 +32,10 @@ class DifferentialTransformer(nn.Module):
         pos_embed = self.position_embedding(positions)
         x = token_embed + pos_embed
 
+        # Reshape attention mask to be compatible with transformer layers
+        if attention_mask is not None:
+            attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+
         for layer in self.layers:
             x = layer(x, mask=attention_mask)
 
