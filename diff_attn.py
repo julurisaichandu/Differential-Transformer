@@ -59,14 +59,15 @@ class DifferentialAttention(nn.Module):
         attn_weights = F.softmax(attn_diff, dim=-1)
         out = torch.matmul(attn_weights, v)
 
-        # Reshape output
+
+        # Reshape output and keep a tab on dimensions.
         out = out.permute(0, 2, 1, 3).contiguous()
         out = out.view(batch_size, seq_len, self.n_heads * self.d_head)
         out = out.transpose(1, 2)  # [batch_size, n_heads * d_head, seq_len]
         out = self.group_norm(out)
         out = out.transpose(1, 2)  # [batch_size, seq_len, n_heads * d_head]
 
-        out = out * (1 - self.lambda_param.mean())  # Apply lambda scaling to the output
+        out = out * (1 - self.lambda_param.mean())
         out = self.o_proj(out)
 
         return out
