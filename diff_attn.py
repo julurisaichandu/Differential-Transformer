@@ -32,7 +32,8 @@ class DifferentialAttention(nn.Module):
             torch.exp(self.lambda_q2 * self.lambda_k2) +
             self.lambda_init
         )
-        return lambda_val.view(1, 1, 1, -1)
+        # Adjust reshaping for proper broadcasting with attn1
+        return lambda_val.view(1, self.n_heads, 1, self.d_head)
 
     def forward(self, x, mask=None):
         batch_size, seq_len, _ = x.shape
@@ -49,27 +50,27 @@ class DifferentialAttention(nn.Module):
         k1, k2 = k1.permute(0, 2, 1, 3), k2.permute(0, 2, 1, 3)
         v = v.permute(0, 2, 1, 3)
 
+        # Compute attention scores
         scale = 1.0 / math.sqrt(self.d_head)
         score_1 = torch.matmul(q1, k1.transpose(-2, -1)) * scale
         score_2 = torch.matmul(q2, k2.transpose(-2, -1)) * scale
 
+        # Compute softmax attention scores
         attn1 = F.softmax(score_1, dim=-1)
         attn2 = F.softmax(score_2, dim=-1)
+
         lambda_val = self.compute_lambda()
 
-        lambda_val = lambda_val.expand_as(attn1)
-        # Subtract attn2 from attn1 with lambda scaling
+        lambda_val = lambda_val.expand(batch_size, -1, seq_len, seq_len)
+
         attn_diff = attn1 - lambda_val * attn2
 
-        # Apply attention mask (if provided) after computing attn_diff
         if mask is not None:
             attn_diff = attn_diff.masked_fill(mask == 0, float('-inf'))
 
-        # Perform attention over the values
         attn_weights = F.softmax(attn_diff, dim=-1)
         out = torch.matmul(attn_weights, v)
 
-        # Reshape output
         out = out.permute(0, 2, 1, 3).contiguous()
         out = out.view(batch_size, seq_len, self.n_heads * self.d_head)
         out = out.transpose(1, 2)  # [batch_size, n_heads * d_head, seq_len]
