@@ -15,27 +15,16 @@ class DifferentialAttention(nn.Module):
         self.v_proj = nn.Linear(d_model, d_head * n_heads, bias=False)
         self.o_proj = nn.Linear(d_head * n_heads, d_model, bias=False)
 
-        # Lambda Parameters
-        # Define lambda parameters to accommodate the number of heads
-        self.lambda_q1 = nn.Parameter(torch.zeros(n_heads, d_head))
-        self.lambda_k1 = nn.Parameter(torch.zeros(n_heads, d_head))
-        self.lambda_q2 = nn.Parameter(torch.zeros(n_heads, d_head))
-        self.lambda_k2 = nn.Parameter(torch.zeros(n_heads, d_head))
-        self.lambda_init = 0.8
+
+        self.lambda_param = nn.Parameter(torch.ones(n_heads) * 0.8)
 
         self.dropout = nn.Dropout(dropout)
 
         self.group_norm = nn.GroupNorm(n_heads, d_head * n_heads)
 
-    def compute_lambda(self):
-        # Compute lambda with dimensions to accommodate each head
-        lambda_val = (
-            torch.exp(self.lambda_q1 * self.lambda_k1) -
-            torch.exp(self.lambda_q2 * self.lambda_k2) +
-            self.lambda_init
-        )
-        # Adjust reshaping for proper broadcasting with attn1
-        return lambda_val.view(1, self.n_heads, 1, self.d_head)
+    def compute_lambda(self, batch_size, seq_len):
+
+        return self.lambda_param.view(1, self.n_heads, 1, 1).expand(batch_size, self.n_heads, seq_len, seq_len)
 
     def forward(self, x, mask=None):
         batch_size, seq_len, _ = x.shape
@@ -49,24 +38,21 @@ class DifferentialAttention(nn.Module):
         q1, q2 = q[..., 0, :], q[..., 1, :]
         k1, k2 = k[..., 0, :], k[..., 1, :]
 
-        # Transpose for multi-head attention computation
         q1, q2 = q1.permute(0, 2, 1, 3), q2.permute(0, 2, 1, 3)
         k1, k2 = k1.permute(0, 2, 1, 3), k2.permute(0, 2, 1, 3)
         v = v.permute(0, 2, 1, 3)
 
-        # Compute attention scores
         scale = 1.0 / math.sqrt(self.d_head)
         score_1 = torch.matmul(q1, k1.transpose(-2, -1)) * scale
         score_2 = torch.matmul(q2, k2.transpose(-2, -1)) * scale
 
-        # Compute softmax attention scores
         attn1 = F.softmax(score_1, dim=-1)
         attn2 = F.softmax(score_2, dim=-1)
 
-        lambda_val = self.compute_lambda()
-        lambda_val = lambda_val.expand(batch_size, -1, seq_len, seq_len)
-
+        # Compute lambda value for differential attention
+        lambda_val = self.compute_lambda(batch_size, seq_len)
         attn_diff = attn1 - lambda_val * attn2
+
         if mask is not None:
             attn_diff = attn_diff.masked_fill(mask == 0, float('-inf'))
 
@@ -80,7 +66,7 @@ class DifferentialAttention(nn.Module):
         out = self.group_norm(out)
         out = out.transpose(1, 2)  # [batch_size, seq_len, n_heads * d_head]
 
-        out = out * (1 - self.lambda_init)
+        out = out * (1 - self.lambda_param.mean())  # Apply lambda scaling to the output
         out = self.o_proj(out)
 
         return out
