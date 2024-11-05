@@ -32,7 +32,7 @@ class DifferentialAttention(nn.Module):
                       torch.exp(self.lambda_q2 * self.lambda_k2) +
                       self.lambda_init)
         # Reshape for broadcasting
-        return lambda_val.view(1, 1, 1, -1)
+        return lambda_val.view(1, 1, -1, 1)
 
     def forward(self, x, mask=None):
         batch_size, seq_len, _ = x.shape
@@ -69,12 +69,9 @@ class DifferentialAttention(nn.Module):
         attn2 = F.softmax(score_2, dim=-1)
 
         lambda_val = self.compute_lambda()
-        if attn1.shape != attn2.shape:
-            raise RuntimeError(f"Shape mismatch: attn1 has shape {attn1.shape}, attn2 has shape {attn2.shape}")
+        attn2 = attn2.expand_as(attn1) if attn1.shape != attn2.shape else attn2
 
         attn_diff = attn1 - lambda_val * attn2
-
-
         out = torch.matmul(attn_diff, v)
 
         # Reshape output
