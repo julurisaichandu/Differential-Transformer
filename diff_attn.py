@@ -69,6 +69,9 @@ class DifferentialAttention(nn.Module):
         attn2 = F.softmax(score_2, dim=-1)
 
         lambda_val = self.compute_lambda()
+        if attn1.shape != attn2.shape:
+            raise RuntimeError(f"Shape mismatch: attn1 has shape {attn1.shape}, attn2 has shape {attn2.shape}")
+
         attn_diff = attn1 - lambda_val * attn2
 
 
