@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-
 class DifferentialAttention(nn.Module):
     def __init__(self, d_model, d_head, n_heads, dropout=0.1):
         super().__init__()
@@ -28,51 +27,47 @@ class DifferentialAttention(nn.Module):
         self.group_norm = nn.GroupNorm(n_heads, d_head * n_heads)
 
     def compute_lambda(self):
-        lambda_val = (torch.exp(self.lambda_q1 * self.lambda_k1) -
-                      torch.exp(self.lambda_q2 * self.lambda_k2) +
-                      self.lambda_init)
-        # Reshape for broadcasting
-        return lambda_val.view(1, 1, -1, 1)
+        lambda_val = (
+            torch.exp(self.lambda_q1 * self.lambda_k1) -
+            torch.exp(self.lambda_q2 * self.lambda_k2) +
+            self.lambda_init
+        )
+        return lambda_val.view(1, 1, 1, -1)
 
     def forward(self, x, mask=None):
         batch_size, seq_len, _ = x.shape
 
-
+        # Project the inputs to queries, keys, and values
         q = self.q_proj(x).view(batch_size, seq_len, self.n_heads, 2, self.d_head)
         k = self.k_proj(x).view(batch_size, seq_len, self.n_heads, 2, self.d_head)
         v = self.v_proj(x).view(batch_size, seq_len, self.n_heads, self.d_head)
 
-
         q1, q2 = q[..., 0, :], q[..., 1, :]
         k1, k2 = k[..., 0, :], k[..., 1, :]
 
-        q1 = q1.permute(0, 2, 1, 3)
-        q2 = q2.permute(0, 2, 1, 3)
-        k1 = k1.permute(0, 2, 1, 3)
-        k2 = k2.permute(0, 2, 1, 3)
+        q1, q2 = q1.permute(0, 2, 1, 3), q2.permute(0, 2, 1, 3)
+        k1, k2 = k1.permute(0, 2, 1, 3), k2.permute(0, 2, 1, 3)
         v = v.permute(0, 2, 1, 3)
 
-        # Compute attention scores
         scale = 1.0 / math.sqrt(self.d_head)
         score_1 = torch.matmul(q1, k1.transpose(-2, -1)) * scale
         score_2 = torch.matmul(q2, k2.transpose(-2, -1)) * scale
 
-
-        if mask is not None:
-
-            mask = mask.unsqueeze(1).unsqueeze(2)
-            score_1 = score_1.masked_fill(mask == 0, float('-inf'))
-            score_2 = score_2.masked_fill(mask == 0, float('-inf'))
-
-
         attn1 = F.softmax(score_1, dim=-1)
         attn2 = F.softmax(score_2, dim=-1)
-
         lambda_val = self.compute_lambda()
-        attn2 = attn2.expand_as(attn1) if attn1.shape != attn2.shape else attn2
 
+        lambda_val = lambda_val.expand_as(attn1)
+        # Subtract attn2 from attn1 with lambda scaling
         attn_diff = attn1 - lambda_val * attn2
-        out = torch.matmul(attn_diff, v)
+
+        # Apply attention mask (if provided) after computing attn_diff
+        if mask is not None:
+            attn_diff = attn_diff.masked_fill(mask == 0, float('-inf'))
+
+        # Perform attention over the values
+        attn_weights = F.softmax(attn_diff, dim=-1)
+        out = torch.matmul(attn_weights, v)
 
         # Reshape output
         out = out.permute(0, 2, 1, 3).contiguous()
