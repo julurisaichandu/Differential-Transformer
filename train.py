@@ -8,13 +8,13 @@ from Diff_Transformer import DifferentialTransformer
 from tqdm import tqdm
 
 # Hyperparameters
-BATCH_SIZE = 16
+BATCH_SIZE = 128
 LEARNING_RATE = 1e-4
 EPOCHS = 3
 MAX_SEQ_LENGTH = 128
 VOCAB_SIZE = 30522  # BERT-base vocab size
 NUM_CLASSES = 4     # AG News has 4 classes
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 # Define Model
 model = DifferentialTransformer(
