@@ -19,3 +19,18 @@ class EmbeddingLayer(nn.Module):
         x = self.dropout(x)
 
         return x
+
+class FeedForwardNetwork(nn.Module):
+    def __init__(self, d_model, d_ff, dropout=0.1):
+        super().__init__()
+        self.swiGLU = swiGLU(d_model)
+        self.linear2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        x = self.swiGLU(x)
+        x = self.dropout(x)
+        x = self.linear2(x)
+        x = self.dropout(x)
+
+        return x
