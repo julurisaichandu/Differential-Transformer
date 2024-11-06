@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+
 class DifferentialAttention(nn.Module):
     def __init__(self, d_model, d_head, n_heads, dropout=0.1):
         super().__init__()
@@ -15,24 +16,24 @@ class DifferentialAttention(nn.Module):
         self.v_proj = nn.Linear(d_model, d_head * n_heads, bias=False)
         self.o_proj = nn.Linear(d_head * n_heads, d_model, bias=False)
 
-
         self.lambda_param = nn.Parameter(torch.ones(n_heads) * 0.8)
-
         self.dropout = nn.Dropout(dropout)
-
         self.group_norm = nn.GroupNorm(n_heads, d_head * n_heads)
 
     def compute_lambda(self, batch_size, seq_len):
-
         return self.lambda_param.view(1, self.n_heads, 1, 1).expand(batch_size, self.n_heads, seq_len, seq_len)
 
-    def forward(self, x, mask=None):
+    def forward(self, x, context=None, mask=None):
         batch_size, seq_len, _ = x.shape
+
+        # For cross-attention, context is used for keys and values
+        if context is None:
+            context = x
 
         # Project the inputs to queries, keys, and values
         q = self.q_proj(x).view(batch_size, seq_len, self.n_heads, 2, self.d_head)
-        k = self.k_proj(x).view(batch_size, seq_len, self.n_heads, 2, self.d_head)
-        v = self.v_proj(x).view(batch_size, seq_len, self.n_heads, self.d_head)
+        k = self.k_proj(context).view(batch_size, context.size(1), self.n_heads, 2, self.d_head)
+        v = self.v_proj(context).view(batch_size, context.size(1), self.n_heads, self.d_head)
 
         # Split into two sets for differential attention
         q1, q2 = q[..., 0, :], q[..., 1, :]
@@ -54,19 +55,20 @@ class DifferentialAttention(nn.Module):
         attn_diff = attn1 - lambda_val * attn2
 
         if mask is not None:
-            attn_diff = attn_diff.masked_fill(mask == 0, float('-inf'))
+            if mask.dim() == 3:
+                mask = mask.unsqueeze(1)
+            mask = mask.expand(batch_size, self.n_heads, seq_len, mask.size(-1))
+            attn_diff = attn_diff.masked_fill(mask == float('-inf'), float('-inf'))
 
         attn_weights = F.softmax(attn_diff, dim=-1)
         out = torch.matmul(attn_weights, v)
 
-
-        # Reshape output and keep a tab on dimensions.
+        # Reshape output
         out = out.permute(0, 2, 1, 3).contiguous()
         out = out.view(batch_size, seq_len, self.n_heads * self.d_head)
-        out = out.transpose(1, 2)  # [batch_size, n_heads * d_head, seq_len]
+        out = out.transpose(1, 2)
         out = self.group_norm(out)
-        out = out.transpose(1, 2)  # [batch_size, seq_len, n_heads * d_head]
-
+        out = out.transpose(1, 2)
         out = out * (1 - self.lambda_param.mean())
         out = self.o_proj(out)
 

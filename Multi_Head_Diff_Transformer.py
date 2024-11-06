@@ -17,6 +17,7 @@ class EmbeddingLayer(nn.Module):
         positions = torch.arange(0, seq_len, dtype=torch.long, device=x.device)
         x = self.token_embedding(x) + self.position_embedding(positions)
         x = self.dropout(x)
+        print(f"Embedding output shape: {x.shape}")
         return x
 
 
@@ -30,9 +31,12 @@ class FeedForwardNetwork(nn.Module):
 
     def forward(self, x):
         x = self.linear1(x)
+        print(f"FeedForwardNetwork linear1 output shape: {x.shape}")
         x = self.swiGLU(x)
+        print(f"FeedForwardNetwork swiGLU output shape: {x.shape}")
         x = self.dropout(x)
         x = self.linear2(x)
+        print(f"FeedForwardNetwork linear2 output shape: {x.shape}")
         x = self.dropout(x)
         return x
 
@@ -46,8 +50,12 @@ class EncoderBlock(nn.Module):
         self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
 
     def forward(self, x):
+        print(f"EncoderBlock input shape: {x.shape}")
         x = x + self.attention(self.prenorm1(x))
-        x = x + self.ffn(self.prenorm2(x))
+        print(f"EncoderBlock after attention shape: {x.shape}")
+        x = self.prenorm2(x)
+        x = x + self.ffn(x)
+        print(f"EncoderBlock after feedforward shape: {x.shape}")
         return x
 
 
@@ -62,12 +70,22 @@ class DecoderBlock(nn.Module):
         self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
 
     def forward(self, x, encoder_out, target_mask=None):
-        # Self-attention over the target tokens with masking
-        x = x + self.self_attention(self.prenorm1(x), mask=target_mask)
-        # Cross-attention over the encoder output
-        x = x + self.cross_attention(self.prenorm2(x), encoder_out)
-        # Feed-forward network
-        x = x + self.ffn(self.prenorm3(x))
+        print(f"DecoderBlock input shape: {x.shape}")
+
+        normed_x = self.prenorm1(x)
+        x = x + self.self_attention(normed_x, mask=target_mask)
+        print(f"DecoderBlock after self-attention shape: {x.shape}")
+
+        # Cross-attention needs to be handled properly.
+        #checkk diff_attn and Diff_layer for changes made.
+        normed_x = self.prenorm2(x)
+        x = x + self.cross_attention.attention(normed_x, context=encoder_out)
+        print(f"DecoderBlock after cross-attention shape: {x.shape}")
+
+        normed_x = self.prenorm3(x)
+        x = x + self.ffn(normed_x)
+        print(f"DecoderBlock after feedforward shape: {x.shape}")
+
         return x
 
 
@@ -79,8 +97,10 @@ class Encoder(nn.Module):
         ])
 
     def forward(self, x):
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
+            print(f"Encoder layer {i} input shape: {x.shape}")
             x = layer(x)
+            print(f"Encoder layer {i} output shape: {x.shape}")
         return x
 
 
@@ -92,8 +112,10 @@ class Decoder(nn.Module):
         ])
 
     def forward(self, x, encoder_output, target_mask=None):
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
+            print(f"Decoder layer {i} input shape: {x.shape}")
             x = layer(x, encoder_output, target_mask=target_mask)
+            print(f"Decoder layer {i} output shape: {x.shape}")
         return x
 
 
@@ -115,14 +137,13 @@ class EncoderDecoderTransformer(nn.Module):
 
     def generate_square_subsequent_mask(self, sz):
         mask = torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
-        return mask
+        # Return mask of shape [1, sz, sz]
+        return mask.unsqueeze(0)
 
     def forward(self, src_tokens, tgt_tokens):
-        # Embedding
         src_embeddings = self.embedding_layer(src_tokens)
         tgt_embeddings = self.embedding_layer(tgt_tokens)
 
-        # Encoder
         encoder_output = self.encoder(src_embeddings)
 
         # Create target mask to prevent attending to future tokens
@@ -135,7 +156,7 @@ class EncoderDecoderTransformer(nn.Module):
         return decoder_output
 
 
-# Sample usage
+
 if __name__ == "__main__":
     vocab_size = 10000
     d_model = 512
@@ -150,4 +171,4 @@ if __name__ == "__main__":
     src_tokens = torch.randint(0, vocab_size, (2, max_seq_len))
     tgt_tokens = torch.randint(0, vocab_size, (2, max_seq_len))
     output = model(src_tokens, tgt_tokens)
-    print(output.shape)  # Expected output: (batch_size, seq_len, d_model)
+    print(f"Final output shape: {output.shape}")  # Expected output: (batch_size, seq_len, d_model)
