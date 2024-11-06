@@ -95,3 +95,38 @@ class Decoder(nn.Module):
         for layer in self.layers:
             x = layer(x, encoder_output, target_mask=target_mask)
         return x
+
+
+class EncoderDecoderTransformer(nn.Module):
+    def __init__(self,
+                 vocab_size,
+                 d_model = 512,
+                 n_heads = 8,
+                 n_layers = 6,
+                 d_head = 64,
+                 d_ff = 2048,
+                 max_seq_len = 512,
+                 dropout = 0.1):
+        super().__init__()
+
+        self.embedding_layer = EmbeddingLayer(vocab_size, d_model, max_seq_len, dropout)
+        self.encoder = Encoder(n_layers, d_model, d_head, n_heads, d_ff, dropout)
+        self.decoder = Decoder(n_layers, d_model, d_head, n_heads, d_ff, dropout)
+
+    def generate_triad_mask(self, sz):
+        mask = torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
+        return mask
+
+
+    def forward(self, src_tokens, target_tokens):
+        src_embeddings = self.embedding_layer(src_tokens)
+        target_embeddings = self.embedding_layer(target_tokens)
+
+        encoder_output = self.encoder(src_embeddings)
+
+        target_seq_len = target_tokens.size(1)
+        target_mask = self.generate_triad_mask(target_seq_len).to(target_tokens.device)
+
+        decoder_output = self.decoder(target_embeddings, encoder_output, target_mask)
+
+        return decoder_output
