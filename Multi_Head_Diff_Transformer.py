@@ -34,3 +34,34 @@ class FeedForwardNetwork(nn.Module):
         x = self.dropout(x)
 
         return x
+
+
+class EncoderBlock(nn.Module):
+    def __init__(self, d_model, d_head, n_heads, d_ff, dropout= 0.1):
+        super().__init__()
+        self.prenorm1 = nn.LayerNorm(d_model)
+        self.attention = DifferentialTransformerLayer(d_model, d_head, n_heads,dropout)
+        self.prenorm2 = nn.LayerNorm(d_model)
+        self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
+
+    def forward(self, x):
+        x = x + self.attention(self.prenorm1(x))
+        x = x + self.ffn(self.prenorm2(x))
+
+        return x
+
+class DecoderBlock(nn.Module):
+    def __init__(self, d_model, d_head, n_heads, d_ff, dropout=0.1):
+        super().__init__()
+        self.prenorm1 = nn.LayerNorm(d_model)
+        self.self_attention = DifferentialTransformerLayer(d_model, d_head, n_heads, dropout)
+        self.prenorm2 = nn.LayerNorm(d_model)
+        self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
+
+    def forward(self, x, encoder_out, target_mask=None):
+        x = x + self.self_attention(self.prenorm1(x), mask = target_mask)
+        # Added Cross Attention here
+        x = x + self.cross_attention(self.prenorm2(x), encoder_out)
+        x = x + self.ffn(self.prenorm3(x))
+
+        return x
