@@ -65,3 +65,33 @@ class DecoderBlock(nn.Module):
         x = x + self.ffn(self.prenorm3(x))
 
         return x
+
+class Encoder(nn.Module):
+    def __init__(self, n_layers, d_model, d_head, n_heads, d_ff, dropout=0.1):
+        super().__init__()
+        self.layers = nn.ModuleList(
+            [
+                EncoderBlock(d_model, d_head, n_heads, d_ff, dropout) for _ in range(n_layers)
+            ]
+        )
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
+class Decoder(nn.Module):
+    def __init__(self, n_layers, d_model, d_head, n_heads, d_ff, dropout=0.1):
+        super().__init__()
+        self.layers = nn.ModuleList(
+            [
+                DecoderBlock(d_model,d_head, n_heads, d_ff, dropout) for _ in range(n_layers)
+
+            ]
+        )
+
+    def forward(self, x, encoder_output, target_mask = None):
+        for layer in self.layers:
+            x = layer(x, encoder_output, target_mask=target_mask)
+        return x
