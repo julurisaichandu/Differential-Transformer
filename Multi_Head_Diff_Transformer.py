@@ -5,6 +5,7 @@ from diff_layer import DifferentialTransformerLayer
 from swiGLU import swiGLU
 
 
+
 class EmbeddingLayer(nn.Module):
     def __init__(self, vocab_size, d_model, max_seq_len, dropout=0.1):
         super().__init__()
@@ -172,3 +173,5 @@ if __name__ == "__main__":
     tgt_tokens = torch.randint(0, vocab_size, (2, max_seq_len))
     output = model(src_tokens, tgt_tokens)
     print(f"Final output shape: {output.shape}")  # Expected output: (batch_size, seq_len, d_model)
+
+
