@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from diff_layer import DifferentialTransformerLayer
 from swiGLU import swiGLU
+from RMSNorm import RMSNorm
 
 
 
@@ -45,48 +46,36 @@ class FeedForwardNetwork(nn.Module):
 class EncoderBlock(nn.Module):
     def __init__(self, d_model, d_head, n_heads, d_ff, dropout=0.1):
         super().__init__()
-        self.prenorm1 = nn.LayerNorm(d_model)
+        self.prenorm1 = RMSNorm(d_model)
         self.attention = DifferentialTransformerLayer(d_model, d_head, n_heads, dropout)
-        self.prenorm2 = nn.LayerNorm(d_model)
+        self.prenorm2 = RMSNorm(d_model)
         self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
 
     def forward(self, x):
-        #print(f"EncoderBlock input shape: {x.shape}")
         x = x + self.attention(self.prenorm1(x))
-        #print(f"EncoderBlock after attention shape: {x.shape}")
-        x = self.prenorm2(x)
-        x = x + self.ffn(x)
-        #print(f"EncoderBlock after feedforward shape: {x.shape}")
+        x = x + self.ffn(self.prenorm2(x))
         return x
 
 
 class DecoderBlock(nn.Module):
     def __init__(self, d_model, d_head, n_heads, d_ff, dropout=0.1):
         super().__init__()
-        self.prenorm1 = nn.LayerNorm(d_model)
+        self.prenorm1 = RMSNorm(d_model)
         self.self_attention = DifferentialTransformerLayer(d_model, d_head, n_heads, dropout)
-        self.prenorm2 = nn.LayerNorm(d_model)
+        self.prenorm2 = RMSNorm(d_model)
         self.cross_attention = DifferentialTransformerLayer(d_model, d_head, n_heads, dropout)
-        self.prenorm3 = nn.LayerNorm(d_model)
+        self.prenorm3 = RMSNorm(d_model)
         self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
 
     def forward(self, x, encoder_out, target_mask=None):
-        #print(f"DecoderBlock input shape: {x.shape}")
-
         normed_x = self.prenorm1(x)
         x = x + self.self_attention(normed_x, mask=target_mask)
-        #print(f"DecoderBlock after self-attention shape: {x.shape}")
 
-        # Cross-attention needs to be handled properly.
-        #checkk diff_attn and Diff_layer for changes made.
         normed_x = self.prenorm2(x)
         x = x + self.cross_attention.attention(normed_x, context=encoder_out)
-        #print(f"DecoderBlock after cross-attention shape: {x.shape}")
 
         normed_x = self.prenorm3(x)
         x = x + self.ffn(normed_x)
-        #print(f"DecoderBlock after feedforward shape: {x.shape}")
-
         return x
 
 
