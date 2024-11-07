@@ -130,10 +130,17 @@ def main():
         dropout=0.1
     ).to(device)
 
+    def save_tokenizer(tokenizer, path):
+        """Save the tokenizer to a file"""
+        tokenizer.save(path)
+
+    # In your main() function, after creating the tokenizer:
+    save_tokenizer(tokenizer, "tokenizer.json")
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.token_to_id("[PAD]"))
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
-
+    tokenizer = create_tokenizer(dataset['train']['text'])
+    save_tokenizer(tokenizer, "tokenizer.json")
     print("Starting training...")
     num_epochs = 10
     for epoch in tqdm(range(num_epochs), desc='Epochs'):
