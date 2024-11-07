@@ -121,20 +121,13 @@ class Decoder(nn.Module):
 
 
 class EncoderDecoderTransformer(nn.Module):
-    def __init__(self,
-                 vocab_size,
-                 d_model=512,
-                 n_heads=8,
-                 n_layers=6,
-                 d_head=64,
-                 d_ff=2048,
-                 max_seq_len=512,
-                 dropout=0.1):
+    def __init__(self, vocab_size, d_model=512, n_heads=8, n_layers=6, d_head=64, d_ff=2048, max_seq_len=512, dropout=0.1):
         super().__init__()
-
         self.embedding_layer = EmbeddingLayer(vocab_size, d_model, max_seq_len, dropout)
         self.encoder = Encoder(n_layers, d_model, d_head, n_heads, d_ff, dropout)
         self.decoder = Decoder(n_layers, d_model, d_head, n_heads, d_ff, dropout)
+        # Add output projection layer
+        self.output_projection = nn.Linear(d_model, vocab_size)
 
     def generate_square_subsequent_mask(self, sz):
         mask = torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
@@ -146,15 +139,13 @@ class EncoderDecoderTransformer(nn.Module):
         tgt_embeddings = self.embedding_layer(tgt_tokens)
 
         encoder_output = self.encoder(src_embeddings)
-
-        # Create target mask to prevent attending to future tokens
         tgt_seq_len = tgt_tokens.size(1)
         tgt_mask = self.generate_square_subsequent_mask(tgt_seq_len).to(tgt_tokens.device)
 
-        # Decoder
         decoder_output = self.decoder(tgt_embeddings, encoder_output, target_mask=tgt_mask)
-
-        return decoder_output
+        # Project to vocabulary size
+        output = self.output_projection(decoder_output)
+        return output
 
 
 
