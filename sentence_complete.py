@@ -5,6 +5,7 @@ from datasets import load_dataset
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers
 import numpy as np
 from Multi_Head_Diff_Transformer import EncoderDecoderTransformer
+from tqdm import tqdm
 
 
 class SentenceCompletionDataset(Dataset):
@@ -19,29 +20,21 @@ class SentenceCompletionDataset(Dataset):
             if not isinstance(text, str) or not text.strip():
                 continue
 
-            sentences = [s.strip() for s in text.split('.') if len(s.strip()) > 0]
+            encoded = self.tokenizer.encode(text)
+            tokens = encoded.ids
 
-            for sentence in sentences:
-                if len(sentence.split()) < 8:
-                    continue
+            tokens = [min(t, self.vocab_size - 1) for t in tokens]
 
-                encoded = self.tokenizer.encode(sentence)
-                tokens = encoded.ids
+            if len(tokens) > 8 and len(tokens) <= max_length:
+                split_point = int(len(tokens) * 0.6)
+                input_tokens = tokens[:split_point]
+                target_tokens = tokens[split_point:]
 
-                # Ensure all token IDs are within vocabulary bounds
-                tokens = [t if t < self.vocab_size else tokenizer.token_to_id("[UNK]")
-                          for t in tokens]
+                input_tokens = self._pad_sequence(input_tokens)
+                target_tokens = self._pad_sequence(target_tokens)
 
-                if len(tokens) > 8 and len(tokens) <= max_length:
-                    split_point = int(len(tokens) * 0.6)
-                    input_tokens = tokens[:split_point]
-                    target_tokens = tokens[split_point:]
-
-                    input_tokens = self._pad_sequence(input_tokens)
-                    target_tokens = self._pad_sequence(target_tokens)
-
-                    self.inputs.append(input_tokens)
-                    self.targets.append(target_tokens)
+                self.inputs.append(input_tokens)
+                self.targets.append(target_tokens)
 
         print(f"Created dataset with {len(self.inputs)} samples")
 
@@ -77,8 +70,9 @@ def train_epoch(model, train_loader, optimizer, criterion, device, vocab_size):
     model.train()
     total_loss = 0
 
-    for batch_idx, (src, tgt) in enumerate(train_loader):
-        # Ensure all indices are within bounds
+    progress_bar = tqdm(train_loader, desc='Training', leave=False)
+
+    for batch_idx, (src, tgt) in enumerate(progress_bar):
         src = torch.clamp(src, 0, vocab_size - 1)
         tgt = torch.clamp(tgt, 0, vocab_size - 1)
 
@@ -87,19 +81,18 @@ def train_epoch(model, train_loader, optimizer, criterion, device, vocab_size):
         optimizer.zero_grad()
         output = model(src, tgt)
 
-        output = output.view(-1, output.size(-1))
+        output = output.view(-1, vocab_size)
         tgt = tgt.view(-1)
 
         loss = criterion(output, tgt)
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
         optimizer.step()
+
         total_loss += loss.item()
 
-        if batch_idx % 50 == 0:
-            print(f"Batch {batch_idx}, Loss: {loss.item():.4f}")
+        progress_bar.set_description(f'Training (loss={loss.item():.4f})')
 
     return total_loss / len(train_loader)
 
@@ -142,8 +135,9 @@ def main():
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
 
     print("Starting training...")
-    for epoch in range(10):
-        print(f"\nEpoch {epoch + 1}/10")
+    num_epochs = 10
+    for epoch in tqdm(range(num_epochs), desc='Epochs'):
+        print(f"\nEpoch {epoch + 1}/{num_epochs}")
 
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device, vocab_size)
         print(f"Training loss: {train_loss:.4f}")
@@ -151,7 +145,7 @@ def main():
         model.eval()
         val_loss = 0
         with torch.no_grad():
-            for src, tgt in val_loader:
+            for src, tgt in tqdm(val_loader, desc='Validation', leave=False):
                 src = torch.clamp(src, 0, vocab_size - 1)
                 tgt = torch.clamp(tgt, 0, vocab_size - 1)
                 src, tgt = src.to(device), tgt.to(device)
@@ -166,7 +160,6 @@ def main():
 
         scheduler.step()
 
-        # Save checkpoint
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),

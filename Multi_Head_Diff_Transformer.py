@@ -18,7 +18,7 @@ class EmbeddingLayer(nn.Module):
         positions = torch.arange(0, seq_len, dtype=torch.long, device=x.device)
         x = self.token_embedding(x) + self.position_embedding(positions)
         x = self.dropout(x)
-        print(f"Embedding output shape: {x.shape}")
+        #print(f"Embedding output shape: {x.shape}")
         return x
 
 
@@ -32,12 +32,12 @@ class FeedForwardNetwork(nn.Module):
 
     def forward(self, x):
         x = self.linear1(x)
-        print(f"FeedForwardNetwork linear1 output shape: {x.shape}")
+        #print(f"FeedForwardNetwork linear1 output shape: {x.shape}")
         x = self.swiGLU(x)
-        print(f"FeedForwardNetwork swiGLU output shape: {x.shape}")
+        #print(f"FeedForwardNetwork swiGLU output shape: {x.shape}")
         x = self.dropout(x)
         x = self.linear2(x)
-        print(f"FeedForwardNetwork linear2 output shape: {x.shape}")
+        #print(f"FeedForwardNetwork linear2 output shape: {x.shape}")
         x = self.dropout(x)
         return x
 
@@ -51,12 +51,12 @@ class EncoderBlock(nn.Module):
         self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
 
     def forward(self, x):
-        print(f"EncoderBlock input shape: {x.shape}")
+        #print(f"EncoderBlock input shape: {x.shape}")
         x = x + self.attention(self.prenorm1(x))
-        print(f"EncoderBlock after attention shape: {x.shape}")
+        #print(f"EncoderBlock after attention shape: {x.shape}")
         x = self.prenorm2(x)
         x = x + self.ffn(x)
-        print(f"EncoderBlock after feedforward shape: {x.shape}")
+        #print(f"EncoderBlock after feedforward shape: {x.shape}")
         return x
 
 
@@ -71,21 +71,21 @@ class DecoderBlock(nn.Module):
         self.ffn = FeedForwardNetwork(d_model, d_ff, dropout)
 
     def forward(self, x, encoder_out, target_mask=None):
-        print(f"DecoderBlock input shape: {x.shape}")
+        #print(f"DecoderBlock input shape: {x.shape}")
 
         normed_x = self.prenorm1(x)
         x = x + self.self_attention(normed_x, mask=target_mask)
-        print(f"DecoderBlock after self-attention shape: {x.shape}")
+        #print(f"DecoderBlock after self-attention shape: {x.shape}")
 
         # Cross-attention needs to be handled properly.
         #checkk diff_attn and Diff_layer for changes made.
         normed_x = self.prenorm2(x)
         x = x + self.cross_attention.attention(normed_x, context=encoder_out)
-        print(f"DecoderBlock after cross-attention shape: {x.shape}")
+        #print(f"DecoderBlock after cross-attention shape: {x.shape}")
 
         normed_x = self.prenorm3(x)
         x = x + self.ffn(normed_x)
-        print(f"DecoderBlock after feedforward shape: {x.shape}")
+        #print(f"DecoderBlock after feedforward shape: {x.shape}")
 
         return x
 
@@ -99,9 +99,9 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            print(f"Encoder layer {i} input shape: {x.shape}")
+            #print(f"Encoder layer {i} input shape: {x.shape}")
             x = layer(x)
-            print(f"Encoder layer {i} output shape: {x.shape}")
+            #print(f"Encoder layer {i} output shape: {x.shape}")
         return x
 
 
@@ -114,9 +114,9 @@ class Decoder(nn.Module):
 
     def forward(self, x, encoder_output, target_mask=None):
         for i, layer in enumerate(self.layers):
-            print(f"Decoder layer {i} input shape: {x.shape}")
+            #print(f"Decoder layer {i} input shape: {x.shape}")
             x = layer(x, encoder_output, target_mask=target_mask)
-            print(f"Decoder layer {i} output shape: {x.shape}")
+            #print(f"Decoder layer {i} output shape: {x.shape}")
         return x
 
 
