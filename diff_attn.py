@@ -18,13 +18,13 @@ class DifferentialAttention(nn.Module):
         self.d_head = d_head
         self.n_heads = n_heads
 
-        # Ensure output dimension matches d_model
+        # Ensure output dimension matches d_model. ---VERY IMPORTANT---
         self.q_proj = nn.Linear(d_model, 2 * d_head * n_heads, bias=False)
         self.k_proj = nn.Linear(d_model, 2 * d_head * n_heads, bias=False)
         self.v_proj = nn.Linear(d_model, d_head * n_heads, bias=False)
         self.o_proj = nn.Linear(d_head * n_heads, d_model, bias=False)
 
-        # Initialize norm with correct dimension
+
         self.norm = RMSNorm(d_model)
         self.lambda_param = nn.Parameter(torch.ones(n_heads) * 0.8)
         self.dropout = nn.Dropout(dropout)
@@ -68,7 +68,8 @@ class DifferentialAttention(nn.Module):
         if mask is not None:
             if mask.dim() == 3:
                 mask = mask.unsqueeze(1)
-            mask = mask.expand(batch_size, self.n_heads, seq_len, mask.size(-1))
+            mask = mask.unsqueeze(1).unsqueeze(2)
+            mask = mask.expand(batch_size, self.n_heads, seq_len, seq_len)
             attn_diff = attn_diff.masked_fill(mask == float('-inf'), float('-inf'))
 
         attn_weights = F.softmax(attn_diff, dim=-1)
@@ -78,10 +79,7 @@ class DifferentialAttention(nn.Module):
         out = out.permute(0, 2, 1, 3).contiguous()
         out = out.view(batch_size, seq_len, self.n_heads * self.d_head)
 
-        # Apply normalization
         out = self.norm(out)
-
-        # Apply output projection
         out = out * (1 - self.lambda_param.mean())
         out = self.o_proj(out)
 
