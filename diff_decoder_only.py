@@ -75,15 +75,12 @@ def objective(trial):
     model.train()
     learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
 
-    num_epochs = 3
+    num_epochs = 20
     total_loss = 0
-    best_loss = float('inf')
 
-    # Training loop with tqdm
     for epoch in range(num_epochs):
-        model.train()
         epoch_loss = 0
         pbar = tqdm(dataloader, desc=f'Epoch {epoch + 1}/{num_epochs}')
 
@@ -92,79 +89,116 @@ def objective(trial):
 
 
             input_ids = batch['input_ids']
+            attention_mask = batch['attention_mask']
+
             if isinstance(input_ids, list):
-                input_ids = torch.stack([torch.tensor(x) for x in input_ids])
+                input_ids = torch.stack(
+                    [x.clone().detach() if isinstance(x, torch.Tensor) else torch.tensor(x) for x in input_ids])
+                attention_mask = torch.stack(
+                    [x.clone().detach() if isinstance(x, torch.Tensor) else torch.tensor(x) for x in attention_mask])
+
 
             input_ids = input_ids.to(next(model.parameters()).device)
+            attention_mask = attention_mask.to(input_ids.device)
+
+            # Ensure dimensions match model's expected size
+            if input_ids.size(-1) > 128:
+                input_ids = input_ids[:, :128]
+                attention_mask = attention_mask[:, :128]
+
             target_ids = input_ids[:, 1:]
 
+            output = model(input_ids[:, :-1], mask=attention_mask[:, :-1])
 
-            output = model(input_ids[:, :-1])
-            loss = criterion(output.reshape(-1, tokenizer.vocab_size), target_ids.reshape(-1))
-
+            loss = criterion(
+                output.reshape(-1, tokenizer.vocab_size),
+                target_ids.reshape(-1)
+            )
 
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-
 
             current_loss = loss.item()
             epoch_loss += current_loss
             pbar.set_postfix({'loss': f'{current_loss:.4f}'})
 
         avg_epoch_loss = epoch_loss / len(dataloader)
-
-
-        if avg_epoch_loss < best_loss:
-            best_loss = avg_epoch_loss
-            save_checkpoint(model, optimizer, epoch, best_loss, trial.number)
-
         total_loss += avg_epoch_loss
+
+        # Save checkpoint every 5 epochs
+        if (epoch + 1) % 5 == 0:
+            checkpoint_path = f'checkpoint_trial_{trial.number}_epoch_{epoch + 1}.pt'
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': avg_epoch_loss,
+            }, checkpoint_path)
 
     return total_loss / num_epochs
 
 
 if __name__ == "__main__":
+
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     tokenizer.pad_token = tokenizer.eos_token
 
 
     def tokenize_function(examples):
-        return tokenizer(examples["text"], return_tensors="pt", truncation=True,
-                         padding='max_length', max_length=128)
+        return tokenizer(
+            examples["text"],
+            return_tensors="pt",
+            truncation=True,
+            padding='max_length',
+            max_length=128,
+            return_attention_mask=True
+        )
 
 
     tokenized_datasets = dataset.map(tokenize_function, batched=True)
     dataloader = DataLoader(tokenized_datasets, batch_size=32, shuffle=True)
 
     # Hyperparameter optimization
-    study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=10)
+    try:
 
-    # Print best parameters
-    print("\nBest trial:")
-    trial = study.best_trial
-    print("  Value: ", trial.value)
-    print("  Params: ")
-    for key, value in trial.params.items():
-        print(f"    {key}: {value}")
+        study = optuna.create_study(direction="minimize")
+        study.optimize(objective, n_trials=10)
+
+        # Print best parameters
+        print("\nBest trial:")
+        trial = study.best_trial
+        print("  Value: ", trial.value)
+        print("  Params: ")
+        for key, value in trial.params.items():
+            print(f"    {key}: {value}")
+
+        # Save best model
+        best_model = DecoderOnlyModel(
+            vocab_size=tokenizer.vocab_size,
+            d_model=trial.params["d_model"],
+            n_heads=trial.params["n_heads"],
+            d_head=trial.params["d_model"] // trial.params["n_heads"],
+            n_layers=trial.params["n_layers"],
+            max_seq_len=128,
+            dropout=trial.params["dropout"]
+        )
 
 
-    best_model = DecoderOnlyModel(
-        vocab_size=tokenizer.vocab_size,
-        d_model=trial.params["d_model"],
-        n_heads=trial.params["n_heads"],
-        d_head=trial.params["d_model"] // trial.params["n_heads"],
-        n_layers=trial.params["n_layers"],
-        max_seq_len=128,
-        dropout=trial.params["dropout"]
-    )
+        best_checkpoint = torch.load(f'checkpoint_trial_{trial.number}_epoch_20.pt')
+        best_model.load_state_dict(best_checkpoint['model_state_dict'])
 
+
+        torch.save(best_model.state_dict(), 'best_model.pt')
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        raise
 
     checkpoint_path = f"checkpoints/checkpoint_trial_{trial.number}_epoch_{study.best_trial.number}.pt"
     best_model.load_state_dict(torch.load(checkpoint_path)['model_state_dict'])
     best_model.eval()
-
 
     eval_dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     tokenized_eval_dataset = eval_dataset.map(tokenize_function, batched=True)
