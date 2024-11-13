@@ -9,7 +9,8 @@ class RMSNorm(nn.Module):
         self.scale = nn.Parameter(torch.ones(dim))
 
     def forward(self, x):
-        # Keep dims for proper broadcasting
+        if x.size(-1) != self.scale.size(0):
+            raise ValueError(f"Input tensor dimension {x.size(-1)} doesn't match scale dimension {self.scale.size(0)}")
         rms = torch.sqrt(torch.mean(x ** 2, dim=-1, keepdim=True) + self.eps)
         x_norm = x / rms
         return x_norm * self.scale

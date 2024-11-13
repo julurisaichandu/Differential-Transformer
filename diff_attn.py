@@ -18,12 +18,14 @@ class DifferentialAttention(nn.Module):
         self.d_head = d_head
         self.n_heads = n_heads
 
+        # Ensure output dimension matches d_model
         self.q_proj = nn.Linear(d_model, 2 * d_head * n_heads, bias=False)
         self.k_proj = nn.Linear(d_model, 2 * d_head * n_heads, bias=False)
         self.v_proj = nn.Linear(d_model, d_head * n_heads, bias=False)
         self.o_proj = nn.Linear(d_head * n_heads, d_model, bias=False)
 
-        self.norm = RMSNorm(d_model)  # Changed dimension to d_model
+        # Initialize norm with correct dimension
+        self.norm = RMSNorm(d_model)
         self.lambda_param = nn.Parameter(torch.ones(n_heads) * 0.8)
         self.dropout = nn.Dropout(dropout)
 
