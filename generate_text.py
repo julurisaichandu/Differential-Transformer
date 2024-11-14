@@ -27,3 +27,28 @@ def generate_text(model, tokenizer, prompt, max_length=50, temperature=0.7):
 
     generated_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
     return generated_text
+
+
+tokenizer = AutoTokenizer.from_pretrained("gpt2")
+tokenizer.pad_token = tokenizer.eos_token
+
+
+# Make sure that checkpoint model params are same.
+model_params = {
+    "vocab_size": tokenizer.vocab_size,
+    "d_model": 512,
+    "n_heads": 8,
+    "d_head": 64,
+    "n_layers": 6,
+    "max_seq_len": 128,
+    "dropout": 0.1
+}
+
+
+checkpoint_path = "checkpoint_trial_2_epoch_5.pt"  # Adjust this to your checkpoint path
+model = load_model(checkpoint_path, model_params)
+
+
+prompt = "We live in the word of desires but"
+generated_text = generate_text(model, tokenizer, prompt, max_length=5)
+print(f"Generated text:\n{generated_text}")
