@@ -68,7 +68,7 @@ class DifferentialAttention(nn.Module):
         if mask is not None:
             if mask.dim() == 3:
                 mask = mask.unsqueeze(1)
-            mask = mask.unsqueeze(1).unsqueeze(2)
+            # mask = mask.unsqueeze(1).unsqueeze(2)
             mask = mask.expand(batch_size, self.n_heads, seq_len, seq_len)
             attn_diff = attn_diff.masked_fill(mask == float('-inf'), float('-inf'))
 

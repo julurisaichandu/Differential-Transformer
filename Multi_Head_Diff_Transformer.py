@@ -137,6 +137,21 @@ class EncoderDecoderTransformer(nn.Module):
         return output
 
 
+class EncoderOnlyTransformer(nn.Module):
+    def __init__(self, vocab_size, d_model=512, n_heads=8, n_layers=6, d_head=64, d_ff=2048, max_seq_len=512, dropout=0.1):
+        super().__init__()
+        self.embedding_layer = EmbeddingLayer(vocab_size, d_model, max_seq_len, dropout)
+        self.encoder = Encoder(n_layers, d_model, d_head, n_heads, d_ff, dropout)
+        # Add output projection layer
+        self.output_projection = nn.Linear(d_model, vocab_size)
+
+    def forward(self, src_tokens):
+        src_embeddings = self.embedding_layer(src_tokens)
+        encoder_output = self.encoder(src_embeddings)
+        # Project to vocabulary size
+        output = self.output_projection(encoder_output)
+        return output
+
 
 if __name__ == "__main__":
     vocab_size = 10000
