@@ -3,8 +3,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers
-import numpy as np
-from Multi_Head_Diff_Transformer import EncoderDecoderTransformer
+from module.Multi_Head_Diff_Transformer import EncoderDecoderTransformer
 from tqdm import tqdm
 
 

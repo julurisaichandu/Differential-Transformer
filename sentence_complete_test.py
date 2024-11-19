@@ -1,6 +1,6 @@
 import torch
 from tokenizers import Tokenizer
-from Multi_Head_Diff_Transformer import EncoderDecoderTransformer
+from module.Multi_Head_Diff_Transformer import EncoderDecoderTransformer
 from tqdm import tqdm
 
 
