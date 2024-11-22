@@ -1,0 +1,259 @@
+2024-11-19 17:04:02,505 INFO    StreamThr :2550 [internal.py:wandb_internal():86] W&B internal server running at pid: 2550, started at: 2024-11-19 17:04:02.504132
+2024-11-19 17:04:02,508 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status
+2024-11-19 17:04:02,522 INFO    WriterThread:2550 [datastore.py:open_for_write():87] open: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/run-ob78hxde.wandb
+2024-11-19 17:04:02,523 DEBUG   SenderThread:2550 [sender.py:send():378] send: header
+2024-11-19 17:04:02,559 DEBUG   SenderThread:2550 [sender.py:send():378] send: run
+2024-11-19 17:04:03,074 INFO    SenderThread:2550 [dir_watcher.py:__init__():211] watching files in: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files
+2024-11-19 17:04:03,074 INFO    SenderThread:2550 [sender.py:_start_run_threads():1099] run started: ob78hxde with start time 1732053842.504185
+2024-11-19 17:04:03,088 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: check_version
+2024-11-19 17:04:03,088 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: check_version
+2024-11-19 17:04:05,485 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: run_start
+2024-11-19 17:04:05,495 DEBUG   HandlerThread:2550 [system_info.py:__init__():26] System info init
+2024-11-19 17:04:05,495 DEBUG   HandlerThread:2550 [system_info.py:__init__():41] System info init done
+2024-11-19 17:04:05,495 INFO    HandlerThread:2550 [system_monitor.py:start():194] Starting system monitor
+2024-11-19 17:04:05,495 INFO    SystemMonitor:2550 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2024-11-19 17:04:05,495 INFO    HandlerThread:2550 [system_monitor.py:probe():214] Collecting system info
+2024-11-19 17:04:05,496 INFO    SystemMonitor:2550 [interfaces.py:start():190] Started cpu monitoring
+2024-11-19 17:04:05,496 DEBUG   HandlerThread:2550 [system_info.py:probe():150] Probing system
+2024-11-19 17:04:05,496 INFO    SystemMonitor:2550 [interfaces.py:start():190] Started disk monitoring
+2024-11-19 17:04:05,498 INFO    SystemMonitor:2550 [interfaces.py:start():190] Started gpuapple monitoring
+2024-11-19 17:04:05,500 INFO    SystemMonitor:2550 [interfaces.py:start():190] Started memory monitoring
+2024-11-19 17:04:05,502 INFO    SystemMonitor:2550 [interfaces.py:start():190] Started network monitoring
+2024-11-19 17:04:05,512 DEBUG   HandlerThread:2550 [system_info.py:_probe_git():135] Probing git
+2024-11-19 17:04:05,536 DEBUG   HandlerThread:2550 [system_info.py:_probe_git():143] Probing git done
+2024-11-19 17:04:05,536 DEBUG   HandlerThread:2550 [system_info.py:probe():198] Probing system done
+2024-11-19 17:04:05,536 DEBUG   HandlerThread:2550 [system_monitor.py:probe():223] {'os': 'macOS-14.6.1-arm64-arm-64bit', 'python': '3.10.9', 'heartbeatAt': '2024-11-19T22:04:05.496607', 'startedAt': '2024-11-19T22:04:02.482278', 'docker': None, 'cuda': None, 'args': (), 'state': 'running', 'program': '<python with no main file>', 'codePathLocal': None, 'git': {'remote': 'https://github.com/SteveMama/Differential-Transformer.git', 'commit': '97889f33cf97834a0e57848ea9bbbb040a8371af'}, 'email': 'pkompally@gmail.com', 'root': '/Users/stevemama/diff-transformer', 'host': 'Pranavs-MacBook-Pro.local', 'username': 'stevemama', 'executable': '/Users/stevemama/anaconda3/bin/python', 'cpu_count': 8, 'cpu_count_logical': 8, 'disk': {'/': {'total': 460.4317207336426, 'used': 443.47094345092773}}, 'gpuapple': {'type': 'arm', 'vendor': 'Apple'}, 'memory': {'total': 8.0}}
+2024-11-19 17:04:05,536 INFO    HandlerThread:2550 [system_monitor.py:probe():224] Finished collecting system info
+2024-11-19 17:04:05,536 INFO    HandlerThread:2550 [system_monitor.py:probe():227] Publishing system info
+2024-11-19 17:04:05,536 DEBUG   HandlerThread:2550 [system_info.py:_save_conda():207] Saving list of conda packages installed into the current environment
+2024-11-19 17:04:06,090 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_created():271] file/dir created: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/conda-environment.yaml
+2024-11-19 17:04:30,088 DEBUG   HandlerThread:2550 [system_info.py:_save_conda():219] Saving conda packages done
+2024-11-19 17:04:30,093 INFO    HandlerThread:2550 [system_monitor.py:probe():229] Finished publishing system info
+2024-11-19 17:04:30,119 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:30,119 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: keepalive
+2024-11-19 17:04:30,119 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:30,119 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: keepalive
+2024-11-19 17:04:30,119 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:30,119 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: keepalive
+2024-11-19 17:04:30,119 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:30,120 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: keepalive
+2024-11-19 17:04:30,120 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:30,120 DEBUG   SenderThread:2550 [sender.py:send():378] send: files
+2024-11-19 17:04:30,120 INFO    SenderThread:2550 [sender.py:_save_file():1365] saving file wandb-metadata.json with policy now
+2024-11-19 17:04:30,216 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/conda-environment.yaml
+2024-11-19 17:04:30,217 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_created():271] file/dir created: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/wandb-metadata.json
+2024-11-19 17:04:30,700 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: python_packages
+2024-11-19 17:04:30,701 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: stop_status
+2024-11-19 17:04:30,701 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:04:30,702 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: python_packages
+2024-11-19 17:04:30,703 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: stop_status
+2024-11-19 17:04:30,869 DEBUG   SenderThread:2550 [sender.py:send():378] send: telemetry
+2024-11-19 17:04:30,969 INFO    wandb-upload_0:2550 [upload_job.py:push():131] Uploaded file /var/folders/04/k6w52fhj5x9cxz0qqvqcc9j40000gn/T/tmpp19rfomowandb/l2rq2yh1-wandb-metadata.json
+2024-11-19 17:04:31,218 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_created():271] file/dir created: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/requirements.txt
+2024-11-19 17:04:31,219 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_created():271] file/dir created: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:04:33,224 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:04:33,884 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:34,229 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/config.yaml
+2024-11-19 17:04:39,354 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:40,258 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:04:44,371 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:45,706 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:04:45,707 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: stop_status
+2024-11-19 17:04:45,708 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: stop_status
+2024-11-19 17:04:49,895 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:04:52,309 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:04:55,863 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:00,344 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:00,711 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: stop_status
+2024-11-19 17:05:00,712 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:05:00,712 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: stop_status
+2024-11-19 17:05:00,975 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:04,363 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:05,512 DEBUG   SystemMonitor:2550 [system_monitor.py:_start():172] Starting system metrics aggregation loop
+2024-11-19 17:05:05,520 DEBUG   SenderThread:2550 [sender.py:send():378] send: telemetry
+2024-11-19 17:05:05,520 DEBUG   SenderThread:2550 [sender.py:send():378] send: stats
+2024-11-19 17:05:06,530 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:07,375 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/config.yaml
+2024-11-19 17:05:08,381 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:10,389 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:11,828 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:14,408 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:15,710 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: stop_status
+2024-11-19 17:05:15,711 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: stop_status
+2024-11-19 17:05:15,715 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:05:17,552 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:18,419 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:22,437 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:22,891 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:24,447 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:28,470 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:28,818 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:30,475 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:30,718 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: stop_status
+2024-11-19 17:05:30,720 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: stop_status
+2024-11-19 17:05:30,725 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:05:32,479 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:34,260 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:34,486 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:35,530 DEBUG   SenderThread:2550 [sender.py:send():378] send: stats
+2024-11-19 17:05:38,503 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:40,213 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:42,523 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:44,531 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:45,675 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:45,719 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: stop_status
+2024-11-19 17:05:45,719 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: stop_status
+2024-11-19 17:05:45,725 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:05:47,544 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:49,556 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:51,140 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:55,581 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:56,422 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:05:57,588 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:05:59,593 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:06:00,724 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: stop_status
+2024-11-19 17:06:00,724 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: stop_status
+2024-11-19 17:06:00,729 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:06:01,603 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:06:01,933 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:06:05,534 DEBUG   SenderThread:2550 [sender.py:send():378] send: stats
+2024-11-19 17:06:05,620 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:06:07,083 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:06:07,136 DEBUG   SenderThread:2550 [sender.py:send():378] send: telemetry
+2024-11-19 17:06:07,139 DEBUG   SenderThread:2550 [sender.py:send():378] send: exit
+2024-11-19 17:06:07,139 INFO    SenderThread:2550 [sender.py:send_exit():585] handling exit code: 0
+2024-11-19 17:06:07,140 INFO    SenderThread:2550 [sender.py:send_exit():587] handling runtime: 121
+2024-11-19 17:06:07,140 INFO    SenderThread:2550 [sender.py:_save_file():1365] saving file wandb-summary.json with policy end
+2024-11-19 17:06:07,141 INFO    SenderThread:2550 [sender.py:send_exit():593] send defer
+2024-11-19 17:06:07,141 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,141 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 0
+2024-11-19 17:06:07,142 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,142 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 0
+2024-11-19 17:06:07,142 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 1
+2024-11-19 17:06:07,142 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,142 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 1
+2024-11-19 17:06:07,143 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,143 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 1
+2024-11-19 17:06:07,143 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 2
+2024-11-19 17:06:07,143 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,143 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 2
+2024-11-19 17:06:07,143 INFO    HandlerThread:2550 [system_monitor.py:finish():203] Stopping system monitor
+2024-11-19 17:06:07,144 DEBUG   SystemMonitor:2550 [system_monitor.py:_start():179] Finished system metrics aggregation loop
+2024-11-19 17:06:07,145 INFO    HandlerThread:2550 [interfaces.py:finish():202] Joined cpu monitor
+2024-11-19 17:06:07,145 DEBUG   SystemMonitor:2550 [system_monitor.py:_start():183] Publishing last batch of metrics
+2024-11-19 17:06:07,146 INFO    HandlerThread:2550 [interfaces.py:finish():202] Joined disk monitor
+2024-11-19 17:06:07,149 INFO    HandlerThread:2550 [interfaces.py:finish():202] Joined gpuapple monitor
+2024-11-19 17:06:07,149 INFO    HandlerThread:2550 [interfaces.py:finish():202] Joined memory monitor
+2024-11-19 17:06:07,149 INFO    HandlerThread:2550 [interfaces.py:finish():202] Joined network monitor
+2024-11-19 17:06:07,151 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,151 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 2
+2024-11-19 17:06:07,151 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 3
+2024-11-19 17:06:07,151 DEBUG   SenderThread:2550 [sender.py:send():378] send: stats
+2024-11-19 17:06:07,152 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,152 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 3
+2024-11-19 17:06:07,153 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,153 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 3
+2024-11-19 17:06:07,153 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 4
+2024-11-19 17:06:07,153 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,153 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 4
+2024-11-19 17:06:07,154 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,154 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 4
+2024-11-19 17:06:07,154 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 5
+2024-11-19 17:06:07,154 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,154 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 5
+2024-11-19 17:06:07,155 DEBUG   SenderThread:2550 [sender.py:send():378] send: summary
+2024-11-19 17:06:07,156 INFO    SenderThread:2550 [sender.py:_save_file():1365] saving file wandb-summary.json with policy end
+2024-11-19 17:06:07,156 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,156 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 5
+2024-11-19 17:06:07,156 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 6
+2024-11-19 17:06:07,156 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,156 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 6
+2024-11-19 17:06:07,157 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,157 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 6
+2024-11-19 17:06:07,162 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: status_report
+2024-11-19 17:06:07,369 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 7
+2024-11-19 17:06:07,370 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:07,370 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 7
+2024-11-19 17:06:07,370 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:07,370 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 7
+2024-11-19 17:06:07,631 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/config.yaml
+2024-11-19 17:06:07,631 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_created():271] file/dir created: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/wandb-summary.json
+2024-11-19 17:06:08,145 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: poll_exit
+2024-11-19 17:06:09,576 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 8
+2024-11-19 17:06:09,577 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: poll_exit
+2024-11-19 17:06:09,578 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:09,579 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 8
+2024-11-19 17:06:09,580 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:09,580 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 8
+2024-11-19 17:06:09,580 INFO    SenderThread:2550 [job_builder.py:build():298] Attempting to build job artifact
+2024-11-19 17:06:09,582 INFO    SenderThread:2550 [job_builder.py:_get_source_type():428] is repo sourced job
+2024-11-19 17:06:09,582 INFO    SenderThread:2550 [job_builder.py:_get_program_relpath():446] run is notebook based run
+2024-11-19 17:06:09,583 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 9
+2024-11-19 17:06:09,583 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:09,583 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 9
+2024-11-19 17:06:09,584 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:09,584 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 9
+2024-11-19 17:06:09,584 INFO    SenderThread:2550 [dir_watcher.py:finish():358] shutting down directory watcher
+2024-11-19 17:06:09,639 INFO    Thread-12 :2550 [dir_watcher.py:_on_file_modified():288] file/dir modified: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:06:09,640 INFO    SenderThread:2550 [dir_watcher.py:finish():388] scan: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files
+2024-11-19 17:06:09,640 INFO    SenderThread:2550 [dir_watcher.py:finish():402] scan save: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/requirements.txt requirements.txt
+2024-11-19 17:06:09,640 INFO    SenderThread:2550 [dir_watcher.py:finish():402] scan save: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log output.log
+2024-11-19 17:06:09,640 INFO    SenderThread:2550 [dir_watcher.py:finish():402] scan save: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/config.yaml config.yaml
+2024-11-19 17:06:09,646 INFO    SenderThread:2550 [dir_watcher.py:finish():402] scan save: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/wandb-summary.json wandb-summary.json
+2024-11-19 17:06:09,650 INFO    SenderThread:2550 [dir_watcher.py:finish():402] scan save: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/conda-environment.yaml conda-environment.yaml
+2024-11-19 17:06:09,652 INFO    SenderThread:2550 [dir_watcher.py:finish():402] scan save: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/wandb-metadata.json wandb-metadata.json
+2024-11-19 17:06:09,653 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 10
+2024-11-19 17:06:09,655 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:09,658 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 10
+2024-11-19 17:06:09,659 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:09,659 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 10
+2024-11-19 17:06:09,659 INFO    SenderThread:2550 [file_pusher.py:finish():172] shutting down file pusher
+2024-11-19 17:06:10,066 INFO    wandb-upload_0:2550 [upload_job.py:push():131] Uploaded file /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/requirements.txt
+2024-11-19 17:06:10,155 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: poll_exit
+2024-11-19 17:06:10,156 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: poll_exit
+2024-11-19 17:06:10,561 INFO    wandb-upload_1:2550 [upload_job.py:push():131] Uploaded file /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/output.log
+2024-11-19 17:06:10,761 INFO    wandb-upload_3:2550 [upload_job.py:push():131] Uploaded file /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/wandb-summary.json
+2024-11-19 17:06:10,808 INFO    wandb-upload_2:2550 [upload_job.py:push():131] Uploaded file /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/config.yaml
+2024-11-19 17:06:10,995 INFO    wandb-upload_4:2550 [upload_job.py:push():131] Uploaded file /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/files/conda-environment.yaml
+2024-11-19 17:06:11,164 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: poll_exit
+2024-11-19 17:06:11,164 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: poll_exit
+2024-11-19 17:06:11,201 INFO    Thread-11 (_thread_body):2550 [sender.py:transition_state():613] send defer: 11
+2024-11-19 17:06:11,201 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:11,201 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 11
+2024-11-19 17:06:11,202 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:11,202 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 11
+2024-11-19 17:06:11,202 INFO    SenderThread:2550 [file_pusher.py:join():178] waiting for file pusher
+2024-11-19 17:06:11,203 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 12
+2024-11-19 17:06:11,203 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:11,203 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 12
+2024-11-19 17:06:11,203 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:11,203 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 12
+2024-11-19 17:06:11,203 INFO    SenderThread:2550 [file_stream.py:finish():595] file stream finish called
+2024-11-19 17:06:11,741 INFO    SenderThread:2550 [file_stream.py:finish():599] file stream finish is done
+2024-11-19 17:06:11,741 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 13
+2024-11-19 17:06:11,742 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:11,742 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 13
+2024-11-19 17:06:11,742 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:11,742 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 13
+2024-11-19 17:06:11,743 INFO    SenderThread:2550 [sender.py:transition_state():613] send defer: 14
+2024-11-19 17:06:11,743 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: defer
+2024-11-19 17:06:11,743 DEBUG   SenderThread:2550 [sender.py:send():378] send: final
+2024-11-19 17:06:11,743 INFO    HandlerThread:2550 [handler.py:handle_request_defer():172] handle defer: 14
+2024-11-19 17:06:11,743 DEBUG   SenderThread:2550 [sender.py:send():378] send: footer
+2024-11-19 17:06:11,744 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: defer
+2024-11-19 17:06:11,744 INFO    SenderThread:2550 [sender.py:send_request_defer():609] handle sender defer: 14
+2024-11-19 17:06:11,745 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: poll_exit
+2024-11-19 17:06:11,746 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: poll_exit
+2024-11-19 17:06:11,748 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: internal_messages
+2024-11-19 17:06:11,753 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: server_info
+2024-11-19 17:06:11,753 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: get_summary
+2024-11-19 17:06:11,754 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: server_info
+2024-11-19 17:06:11,754 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: sampled_history
+2024-11-19 17:06:11,756 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: job_info
+2024-11-19 17:06:11,929 DEBUG   SenderThread:2550 [sender.py:send_request():405] send_request: job_info
+2024-11-19 17:06:11,932 DEBUG   HandlerThread:2550 [handler.py:handle_request():146] handle_request: shutdown
+2024-11-19 17:06:11,932 INFO    HandlerThread:2550 [handler.py:finish():869] shutting down handler
+2024-11-19 17:06:12,762 INFO    WriterThread:2550 [datastore.py:close():296] close: /Users/stevemama/diff-transformer/module/wandb/run-20241119_170402-ob78hxde/run-ob78hxde.wandb
+2024-11-19 17:06:12,934 INFO    SenderThread:2550 [sender.py:finish():1521] shutting down sender
+2024-11-19 17:06:12,934 INFO    SenderThread:2550 [file_pusher.py:finish():172] shutting down file pusher
+2024-11-19 17:06:12,934 INFO    SenderThread:2550 [file_pusher.py:join():178] waiting for file pusher
