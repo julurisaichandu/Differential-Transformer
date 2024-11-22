@@ -66,6 +66,8 @@ test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 # Training loop
 model.train()
+train_losses = []
+train_accuracies = []
 for epoch in range(10):  # Number of epochs
     total_loss = 0
     correct = 0
@@ -85,7 +87,9 @@ for epoch in range(10):  # Number of epochs
         correct += (predictions == tag_indices).sum().item()
         total += tag_indices.size(0)
     accuracy = correct / total
-    print(f"Epoch {epoch + 1}, Loss: {total_loss / len(train_loader)}, Accuracy: {accuracy:.4f}")
+    train_losses.append(total_loss / len(train_loader))
+    train_accuracies.append(accuracy)
+    print(f"Epoch {epoch + 1}, Loss: {train_losses[-1]:.4f}, Accuracy: {train_accuracies[-1]:.4f}")
 
 # Evaluation on test set
 model.eval()
