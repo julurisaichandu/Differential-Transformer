@@ -180,8 +180,8 @@ class DifferentialTransformer(nn.Module):
 
 
 # Example usage:
-batch_size, seq_len, embedding_dim, h, lambda_init = 32, 128, 64, 8, 0.05
-x = torch.randint(0, 256, (batch_size, seq_len))
-transformer = DifferentialTransformer(heads=h, dim=embedding_dim, lambda_init=lambda_init)
-output = transformer(x)
-print(f"Output shape: {output.shape}")
+# batch_size, seq_len, embedding_dim, h, lambda_init = 32, 128, 64, 8, 0.05
+# x = torch.randint(0, 256, (batch_size, seq_len))
+# transformer = DifferentialTransformer(heads=h, dim=embedding_dim, lambda_init=lambda_init)
+# output = transformer(x)
+# print(f"Output shape: {output.shape}")
