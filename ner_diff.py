@@ -7,8 +7,8 @@ from datasets import load_dataset
 from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
 
-# Load a simple NER dataset from Huggingface
-dataset = load_dataset("conll2003")
+# Load a larger NER dataset from Huggingface
+dataset = load_dataset("wnut_17")
 
 # Preprocess dataset to be used with our model
 class HuggingfaceNERDataset(Dataset):
@@ -63,8 +63,12 @@ def collate_fn(batch):
 # Step 3: Prepare the model, loss function, and optimizer
 dim = 32  # Reduced Model embedding dimension
 heads = 4  # Reduced Number of attention heads
-dropout = 0.3  # Increased Dropout rate for regularization
+dropout = 0.3
 lambda_init = 0.05  # Initial value for lambda
+
+reg_dim = 64
+reg_heads= 4
+reg_dropout = 0.6
 
 # Regularization additions
 weight_decay = 1e-5  # L2 Regularization parameter
@@ -97,7 +101,7 @@ class RegularTransformerNER(torch.nn.Module):
         output = self.output_head(x)
         return output
 
-model_regular = RegularTransformerNER(dim=dim, heads=heads, dropout=dropout, depth=2, num_tokens=num_tokens, num_tags=num_tags)
+model_regular = RegularTransformerNER(dim=reg_dim, heads=reg_heads, dropout=reg_dropout, depth=2, num_tokens=num_tokens, num_tags=num_tags)
 
 loss_function = torch.nn.CrossEntropyLoss(ignore_index=-100)
 optimizer_diff = optim.Adam(model_diff.parameters(), lr=0.001, weight_decay=weight_decay)  # Added weight decay for L2 regularization
