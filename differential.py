@@ -55,16 +55,18 @@ class OutputHead(nn.Module):
 
 class DiffAttn(nn.Module):
     """
-    Differential Attention module.
+    Differential Attention module with learnable lambda.
     """
     def __init__(self, d: int, embedding_dim: int):
         super(DiffAttn, self).__init__()
         self.d = d
         self.W_q = nn.Linear(embedding_dim, 2 * d)
         self.W_k = nn.Linear(embedding_dim, 2 * d)
-        self.W_v = nn.Linear(embedding_dim, d)
+        self.W_v = nn.Linear(embedding_dim, d)  # Project to d dimensions to match attention output
+        self.lambda_ = nn.Parameter(torch.randn(1))  # Scalar learnable lambda
+        self.lambda_init = 0.05
 
-    def forward(self, X: Tensor, lambda_: float) -> Tensor:
+    def forward(self, X: Tensor) -> Tensor:
         Q = self.W_q(X)
         K = self.W_k(X)
         V = self.W_v(X)
@@ -83,7 +85,12 @@ class DiffAttn(nn.Module):
         A2_softmax = F.softmax(A2, dim=-1)
         print(f"A1_softmax shape: {A1_softmax.shape}, A2_softmax shape: {A2_softmax.shape}")
 
-        result = (A1_softmax - lambda_ * A2_softmax) @ V
+        lambda_ = torch.exp(self.lambda_) + self.lambda_init
+        print(f"Learnable lambda: {lambda_}")
+
+        # Calculate the differential attention output
+        differential_attn = A1_softmax - lambda_ * A2_softmax
+        result = torch.bmm(differential_attn, V)
         print(f"DiffAttn result shape: {result.shape}")
         return result
 
@@ -107,8 +114,8 @@ class MultiHeadDifferentialAttention(nn.Module):
         self.W_o = nn.Linear(h * d, embedding_dim)
         self.norm = nn.LayerNorm(embedding_dim)
 
-    def forward(self, X: Tensor, lambda_: float) -> Tensor:
-        O_list = [head(X, lambda_) for head in self.diff_attn_heads]
+    def forward(self, X: Tensor) -> Tensor:
+        O_list = [head(X) for head in self.diff_attn_heads]
         O_concat = torch.cat(O_list, dim=-1)
         print(f"MultiHead O_concat shape: {O_concat.shape}")
         result = self.W_o(O_concat)
@@ -134,12 +141,12 @@ class DifferentialTransformerBlock(nn.Module):
         self.ffn = FeedForward(dim, dim * 4, dropout)
         self.norm = SimpleRMSNorm(dim)
 
-    def forward(self, x: Tensor, lambda_: float = 0.1) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         residual = x
-        attended = self.attn(self.norm(x), lambda_) + residual
+        attended = self.attn(self.norm(x)) + residual
         print(f"DifferentialTransformerBlock first attention output shape: {attended.shape}")
         residual_two = attended
-        attended = self.attn(self.norm(residual_two), lambda_) + residual_two
+        attended = self.attn(self.norm(residual_two)) + residual_two
         print(f"DifferentialTransformerBlock second attention output shape: {attended.shape}")
         return attended
 
@@ -161,11 +168,11 @@ class DifferentialTransformer(nn.Module):
         self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim)
         self.norm = SimpleRMSNorm(dim)
 
-    def forward(self, x, lambda_: float = 0.1):
+    def forward(self, x):
         x = self.norm(self.embed(x))
         print(f"Embedding output shape: {x.shape}")
         for i, layer in enumerate(self.layers):
-            x = layer(x, lambda_)
+            x = layer(x)
             print(f"Layer {i} output shape: {x.shape}")
         output = OutputHead(self.dim, vocab_size=self.num_tokens)(x)
         print(f"Final output shape: {output.shape}")
@@ -173,8 +180,8 @@ class DifferentialTransformer(nn.Module):
 
 
 # Example usage:
-batch_size, seq_len, embedding_dim, h, lambda_, lambda_init = 32, 128, 64, 8, 0.1, 0.05
+batch_size, seq_len, embedding_dim, h, lambda_init = 32, 128, 64, 8, 0.05
 x = torch.randint(0, 256, (batch_size, seq_len))
 transformer = DifferentialTransformer(heads=h, dim=embedding_dim, lambda_init=lambda_init)
-output = transformer(x, lambda_=lambda_)
+output = transformer(x)
 print(f"Output shape: {output.shape}")
