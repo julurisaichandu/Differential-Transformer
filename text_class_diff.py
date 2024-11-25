@@ -54,14 +54,14 @@ train_loader = create_dataloader('train')
 val_loader = create_dataloader('test')
 test_loader = create_dataloader('test')
 num_tokens = tokenizer.vocab_size
-dim = 128           # Reduced from 512
-heads = 4           # Reduced from 8
-depth = 3           # Reduced from 6
+dim = 128
+heads = 4
+depth = 3
 dropout = 0.1
 lambda_init = 0.8
 num_epochs = 5
 learning_rate = 1e-3
-batch_size = 32     # Increased batch size for faster training
+batch_size = 32
 
 
 model = DifferentialTransformer(
@@ -92,15 +92,17 @@ def train(model, dataloader, criterion, optimizer):
         attention_mask = batch['attention_mask'].to(device)
         labels = batch['labels'].to(device)
 
+        optimizer.zero_grad()
+
         outputs = model(input_ids)
-        batch_size = outputs.size(0)
         outputs = outputs.mean(dim=1)
         outputs = nn.Linear(num_tokens, 4).to(device)(outputs)
 
         loss = criterion(outputs, labels)
-
-        optimizer.zero_grad()
         loss.backward()
+
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
         optimizer.step()
 
         _, predicted = torch.max(outputs, -1)
@@ -108,11 +110,10 @@ def train(model, dataloader, criterion, optimizer):
         total_predictions += labels.numel()
         total_loss += loss.item()
 
-
         progress_bar.set_postfix({
-            'loss': f'{loss.item():.4f}',
+            'loss': f'{total_loss / total_predictions:.4f}',
             'accuracy': f'{correct_predictions / total_predictions:.4f}'
-        })
+        }, refresh=True)
 
     avg_loss = total_loss / len(dataloader)
     accuracy = correct_predictions / total_predictions
@@ -184,14 +185,21 @@ def pred_test(model, dataloader):
 
 
 print("Starting training...")
-for epoch in trange(num_epochs, desc="Epochs"):
+epoch_progress = tqdm(range(num_epochs), desc="Epochs", position=0, leave=True)
+for epoch in epoch_progress:
+    # Training phase
     train_loss, train_acc = train(model, train_loader, criterion, optimizer)
-    print(f'Epoch {epoch + 1}/{num_epochs}:')
-    print(f'Training Loss: {train_loss:.4f}, Training Accuracy: {train_acc:.4f}')
 
+    # Validation phase
     val_loss, val_acc = evaluate(model, val_loader, criterion)
-    print(f'Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}')
-    print('-' * 50)
+
+    # Update epoch progress bar
+    epoch_progress.set_postfix({
+        'train_loss': f'{train_loss:.4f}',
+        'train_acc': f'{train_acc:.4f}',
+        'val_loss': f'{val_loss:.4f}',
+        'val_acc': f'{val_acc:.4f}'
+    }, refresh=True)
 
 print("\nTesting model...")
 test_accuracy = pred_test(model, test_loader)
