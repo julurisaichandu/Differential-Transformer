@@ -7,6 +7,7 @@ from datasets import load_dataset
 from differential import DifferentialTransformer
 from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm, trange
+import matplotlib.pyplot as plt
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -77,6 +78,10 @@ model = DifferentialTransformer(
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
+train_losses = []
+train_accuracies = []
+val_losses = []
+val_accuracies = []
 
 def train(model, dataloader, criterion, optimizer):
     model.train()
@@ -183,15 +188,18 @@ def pred_test(model, dataloader):
     accuracy = correct_predictions / total_predictions
     return accuracy
 
-
 print("Starting training...")
 epoch_progress = tqdm(range(num_epochs), desc="Epochs", position=0, leave=True)
 for epoch in epoch_progress:
     # Training phase
     train_loss, train_acc = train(model, train_loader, criterion, optimizer)
+    train_losses.append(train_loss)
+    train_accuracies.append(train_acc)
 
     # Validation phase
     val_loss, val_acc = evaluate(model, val_loader, criterion)
+    val_losses.append(val_loss)
+    val_accuracies.append(val_acc)
 
     # Update epoch progress bar
     epoch_progress.set_postfix({
@@ -201,9 +209,37 @@ for epoch in epoch_progress:
         'val_acc': f'{val_acc:.4f}'
     }, refresh=True)
 
+# Plotting
+plt.figure(figsize=(12, 4))
+
+# Plot losses
+plt.subplot(1, 2, 1)
+plt.plot(train_losses, label='Training Loss')
+plt.plot(val_losses, label='Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.grid(True)
+
+# Plot accuracies
+plt.subplot(1, 2, 2)
+plt.plot(train_accuracies, label='Training Accuracy')
+plt.plot(val_accuracies, label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.savefig('training_metrics.png')
+plt.close()
+
 print("\nTesting model...")
 test_accuracy = pred_test(model, test_loader)
 print(f'Final Test Accuracy: {test_accuracy:.4f}')
 
 torch.save(model.state_dict(), 'differential_transformer_model.pth')
 print("\nModel saved successfully!")
+print("Training metrics plot saved as 'training_metrics.png'")
