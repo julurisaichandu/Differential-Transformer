@@ -61,13 +61,13 @@ def collate_fn(batch):
     return word_indices_padded, tag_indices_padded
 
 # Step 3: Prepare the model, loss function, and optimizer
-dim = 32  # Reduced Model embedding dimension
-heads = 4  # Reduced Number of attention heads
+dim = 8  # Reduced Model embedding dimension
+heads = 1  # Reduced Number of attention heads
 dropout = 0.3
 lambda_init = 0.05  # Initial value for lambda
 
-reg_dim = 64
-reg_heads= 4
+reg_dim = 16
+reg_heads= 2
 reg_dropout = 0.6
 
 # Regularization additions
