@@ -1,14 +1,12 @@
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
+from torch.utils.data import Dataset, DataLoader
 from math import sqrt
+import random
 
 
 class SimpleRMSNorm(nn.Module):
-    """
-    Implements Root Mean Square Layer Normalization.
-    """
-
     def __init__(self, dim: int, eps: float = 1e-8):
         super(SimpleRMSNorm, self).__init__()
         self.dim = dim
@@ -17,14 +15,10 @@ class SimpleRMSNorm(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         rms = x.norm(keepdim=True, dim=-1) / sqrt(self.dim)
-        return (x / (rms + self.eps)) * self.scale
-
+        result = (x / (rms + self.eps)) * self.scale
+        return result
 
 class FeedForward(nn.Module):
-    """
-    Implements the FeedForward network as used in transformers.
-    """
-
     def __init__(self, dim: int, hidden_dim: int, dropout: float = 0.1):
         super(FeedForward, self).__init__()
         self.linear1 = nn.Linear(dim, hidden_dim)
@@ -34,151 +28,159 @@ class FeedForward(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         x = F.gelu(self.linear1(x))
         x = self.dropout(x)
-        return self.linear2(x)
+        x = self.linear2(x)
+        return x
 
+class OutputHead(nn.Module):
+    def __init__(self, dim: int, vocab_size: int):
+        super(OutputHead, self).__init__()
+        self.linear = nn.Linear(dim, vocab_size)
 
-class DifferentialAttention(nn.Module):
-    """
-    Differential Attention module with learnable lambda.
-    """
+    def forward(self, x: Tensor) -> Tensor:
+        result = self.linear(x)
+        return result
 
-    def __init__(self, d: int, embedding_dim: int, lambda_init: float = 0.8):
-        super(DifferentialAttention, self).__init__()
+class DiffAttn(nn.Module):
+    def __init__(self, d: int, embedding_dim: int):
+        super(DiffAttn, self).__init__()
         self.d = d
-        self.lambda_param = nn.Parameter(torch.full((d,), lambda_init))
         self.W_q = nn.Linear(embedding_dim, d)
         self.W_k = nn.Linear(embedding_dim, d)
         self.W_v = nn.Linear(embedding_dim, d)
-        self.projection = nn.Linear(d, embedding_dim)
+        self.W_out = nn.Linear(d, embedding_dim)  # Projection layer to match the original embedding dimension
+        self.lambda_param = nn.Parameter(torch.ones(1, 1, d))
 
-    def forward(self, x: Tensor, context: Tensor = None) -> Tensor:
-        # If context is None, it's self-attention; otherwise, it's cross-attention
-        if context is None:
-            context = x
-
-        queries = self.W_q(x)
-        keys = self.W_k(context)
-        values = self.W_v(context)
-
-        attention_scores = torch.einsum('bqd,bkd->bqk', queries, keys) / sqrt(self.d)
-        attention_weights = F.softmax(attention_scores, dim=-1)
-        weighted_values = torch.einsum('bqk,bkd->bqd', attention_weights, values)
-
-        # Applying differential scaling
-        weighted_values = self.lambda_param * weighted_values
-        return self.projection(weighted_values)
-
+    def forward(self, query: Tensor, key: Tensor, value: Tensor) -> Tensor:
+        q = self.W_q(query)
+        k = self.W_k(key)
+        v = self.W_v(value)
+        #print(f"Query shape: {q.shape}, Key shape: {k.shape}, Value shape: {v.shape}")
+        assert q.shape[-1] == k.shape[-1], f"Query and Key dimension mismatch: {q.shape[-1]} vs {k.shape[-1]}"
+        scores = torch.matmul(q, k.transpose(-2, -1)) / sqrt(self.d)
+        weights = F.softmax(scores, dim=-1)
+        #print(f"Scores shape: {scores.shape}, Weights shape: {weights.shape}")
+        attended = torch.matmul(weights, v)
+        attended = self.W_out(attended)  # Project back to the original embedding dimension
+        #print(f"Attended shape after projection: {attended.shape}")
+        return attended
 
 class DifferentialTransformerBlock(nn.Module):
-    """
-    Implements a differential transformer block for encoder or decoder.
-    """
-
-    def __init__(self, dim: int, heads: int, dropout: float = 0.1, lambda_init: float = 0.8,
-                 cross_attention: bool = False):
+    def __init__(self, dim: int, heads: int, dropout: float = 0.1, lambda_init: float = 0.8):
         super(DifferentialTransformerBlock, self).__init__()
-        self.attn = DifferentialAttention(d=dim, embedding_dim=dim, lambda_init=lambda_init)
-        self.cross_attn = DifferentialAttention(d=dim, embedding_dim=dim,
-                                                lambda_init=lambda_init) if cross_attention else None
+        self.attn = DiffAttn(d=dim // heads, embedding_dim=dim)
         self.ffn = FeedForward(dim, dim * 4, dropout)
-        self.norm1 = SimpleRMSNorm(dim)
-        self.norm2 = SimpleRMSNorm(dim)
-        self.norm3 = SimpleRMSNorm(dim) if cross_attention else None
-
-    def forward(self, x: Tensor, encoder_output: Tensor = None) -> Tensor:
-        residual = x
-        x = self.norm1(x)
-        x = self.attn(x)
-        x = x + residual
-
-        if self.cross_attn and encoder_output is not None:
-            residual = x
-            x = self.norm3(x)
-            x = self.cross_attn(x, encoder_output)
-            x = x + residual
-
-        residual = x
-        x = self.norm2(x)
-        x = self.ffn(x)
-        return x + residual
-
-
-class DifferentialTransformerEncoder(nn.Module):
-    """
-    Implements the Encoder using differential transformer blocks.
-    """
-
-    def __init__(self, dim: int, depth: int, heads: int, dropout: float = 0.1, lambda_init: float = 0.8):
-        super(DifferentialTransformerEncoder, self).__init__()
-        self.layers = nn.ModuleList(
-            [DifferentialTransformerBlock(dim, heads, dropout, lambda_init) for _ in range(depth)])
         self.norm = SimpleRMSNorm(dim)
 
     def forward(self, x: Tensor) -> Tensor:
-        for layer in self.layers:
+        residual = x
+        attended = self.attn(self.norm(x), self.norm(x), self.norm(x)) + residual
+        assert attended.shape == residual.shape, f"Shape mismatch after attention: {attended.shape} vs {residual.shape}"
+        residual = attended
+        attended = self.ffn(self.norm(attended)) + residual
+        assert attended.shape == residual.shape, f"Shape mismatch after feedforward: {attended.shape} vs {residual.shape}"
+        return attended
+
+class DifferentialTransformer(nn.Module):
+    def __init__(self, dim: int = 512, heads: int = 8, dropout: float = 0.1, lambda_init: float = 0.8, depth: int = 6, num_tokens: int = 30000):
+        super(DifferentialTransformer, self).__init__()
+        self.layers = nn.ModuleList([DifferentialTransformerBlock(dim, heads, dropout, lambda_init) for _ in range(depth)])
+        self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim)
+        self.norm = SimpleRMSNorm(dim)
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = self.norm(self.embed(x))
+        for i, layer in enumerate(self.layers):
             x = layer(x)
-        return self.norm(x)
+            assert x.shape[-1] == self.layers[0].attn.d * 8, f"Shape mismatch in layer {i}: expected {self.layers[0].attn.d * 8}, got {x.shape[-1]}"
+        return x
 
-
-class DifferentialTransformerDecoder(nn.Module):
-    """
-    Implements the Decoder using differential transformer blocks.
-    """
-
-    def __init__(self, dim: int, depth: int, heads: int, dropout: float = 0.1, lambda_init: float = 0.8):
-        super(DifferentialTransformerDecoder, self).__init__()
-        self.layers = nn.ModuleList(
-            [DifferentialTransformerBlock(dim, heads, dropout, lambda_init, cross_attention=True) for _ in
-             range(depth)])
+# Implementing the Decoder Block
+class DifferentialTransformerDecoderBlock(nn.Module):
+    def __init__(self, dim: int, heads: int, dropout: float = 0.1, lambda_init: float = 0.8):
+        super(DifferentialTransformerDecoderBlock, self).__init__()
+        self.self_attn = DiffAttn(d=dim // heads, embedding_dim=dim)
+        self.cross_attn = DiffAttn(d=dim // heads, embedding_dim=dim)
+        self.ffn = FeedForward(dim, dim * 4, dropout)
         self.norm = SimpleRMSNorm(dim)
 
     def forward(self, x: Tensor, encoder_output: Tensor) -> Tensor:
-        for layer in self.layers:
-            x = layer(x, encoder_output)
-        return self.norm(x)
+        residual = x
+        attended = self.self_attn(self.norm(x), self.norm(x), self.norm(x)) + residual
+        assert attended.shape == residual.shape, f"Shape mismatch after self-attention: {attended.shape} vs {residual.shape}"
+        residual = attended
+        attended = self.cross_attn(self.norm(attended), self.norm(encoder_output), self.norm(encoder_output))
+        assert attended.shape[:-1] == residual.shape[:-1], f"Shape mismatch after cross-attention: {attended.shape} vs {residual.shape}"
+        attended = attended + residual
+        residual = attended
+        attended = self.ffn(self.norm(attended)) + residual
+        assert attended.shape == residual.shape, f"Shape mismatch after feedforward: {attended.shape} vs {residual.shape}"
+        return attended
 
-
-class DifferentialTransformer(nn.Module):
-    """
-    Implements a full Differential Transformer model with Encoder and Decoder.
-    """
-
-    def __init__(self, dim: int = 512, depth: int = 6, heads: int = 8, dropout: float = 0.1, lambda_init: float = 0.8,
-                 num_tokens: int = 10000):
-        super(DifferentialTransformer, self).__init__()
-        self.embedding = nn.Embedding(num_tokens, dim)
-        self.encoder = DifferentialTransformerEncoder(dim, depth, heads, dropout, lambda_init)
-        self.decoder = DifferentialTransformerDecoder(dim, depth, heads, dropout, lambda_init)
-        self.output_head = nn.Linear(dim, num_tokens)
+class DifferentialTransformerMT(nn.Module):
+    def __init__(self, dim: int = 512, heads: int = 8, dropout: float = 0.1, lambda_init: float = 0.8, depth: int = 6, num_tokens: int = 30000):
+        super(DifferentialTransformerMT, self).__init__()
+        self.encoder = DifferentialTransformer(dim, heads, dropout, lambda_init, depth, num_tokens)
+        self.decoder_layers = nn.ModuleList([DifferentialTransformerDecoderBlock(dim, heads, dropout, lambda_init) for _ in range(depth)])
+        self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim)
+        self.norm = SimpleRMSNorm(dim)
+        self.output_head = OutputHead(dim, vocab_size=num_tokens)
 
     def forward(self, src: Tensor, tgt: Tensor) -> Tensor:
-        src_embedded = self.embedding(src)
-        tgt_embedded = self.embedding(tgt)
+        encoder_output = self.encoder(src)
+        print(f"Encoder output shape: {encoder_output.shape}")
+        x = self.norm(self.embed(tgt))
+        for i, layer in enumerate(self.decoder_layers):
+            x = layer(x, encoder_output)
+            print(f"Decoder layer {i} output shape: {x.shape}")
+        output = self.output_head(x)
+        print(f"Output shape: {output.shape}")
+        return output
 
-        encoder_output = self.encoder(src_embedded)
-        decoder_output = self.decoder(tgt_embedded, encoder_output)
+# Dataset Class for Multi30K-like Data
+class TranslationDataset(Dataset):
+    def __init__(self, src_sentences, tgt_sentences, src_vocab_size=30000, tgt_vocab_size=30000, max_len=30):
+        self.src_sentences = src_sentences
+        self.tgt_sentences = tgt_sentences
+        self.src_vocab_size = src_vocab_size
+        self.tgt_vocab_size = tgt_vocab_size
+        self.max_len = max_len
 
-        return self.output_head(decoder_output)
+    def __len__(self):
+        return len(self.src_sentences)
 
+    def __getitem__(self, idx):
+        src = self.src_sentences[idx]
+        tgt = self.tgt_sentences[idx]
+        src_tensor = torch.randint(0, self.src_vocab_size, (self.max_len,))
+        tgt_tensor = torch.randint(0, self.tgt_vocab_size, (self.max_len,))
+        return src_tensor, tgt_tensor
 
-if __name__ == "__main__":
-    # Example data: batch of sentences (batch_size=2, sequence_length=5)
-    src = torch.randint(0, 10000, (2, 5))  # Source language token IDs
-    tgt = torch.randint(0, 10000, (2, 5))  # Target language token IDs
+# Generating Sample Data
+src_sentences = ["a photo of a cat", "a man riding a horse", "a group of people playing football"] * 100
+tgt_sentences = ["ein Foto einer Katze", "ein Mann reitet ein Pferd", "eine Gruppe von Menschen spielt Fußball"] * 100
 
-    model = DifferentialTransformer()
-    output = model(src, tgt)
-    print(f"Output shape: {output.shape}")  # Expected shape: (batch_size, seq_len, vocab_size)
+dataset = TranslationDataset(src_sentences, tgt_sentences)
+dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.CrossEntropyLoss()
+# Training Loop
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = DifferentialTransformerMT().to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+loss_fn = nn.CrossEntropyLoss()
 
-    # Example training step
+for epoch in range(10):  # Number of epochs
     model.train()
-    for epoch in range(10):
+    total_loss = 0
+    for batch_idx, (src, tgt) in enumerate(dataloader):
+        src, tgt = src.to(device), tgt.to(device)
         optimizer.zero_grad()
-        output = model(src, tgt[:, :-1])  # Shift target by one for teacher forcing
-        loss = criterion(output.view(-1, output.size(-1)), tgt[:, 1:].contiguous().view(-1))
+        output = model(src, tgt)  # Predict the next word
+        loss = loss_fn(output.view(-1, output.size(-1)), tgt.reshape(-1))
         loss.backward()
         optimizer.step()
-        print(f"Epoch {epoch + 1}, Loss: {loss.item()}")
+
+        total_loss += loss.item()
+        if batch_idx % 10 == 0:
+            print(f"Epoch {epoch+1}, Batch {batch_idx}, Loss: {loss.item()}")
+    avg_loss = total_loss / len(dataloader)
+    print(f"Epoch {epoch+1}, Average Loss: {avg_loss}")
