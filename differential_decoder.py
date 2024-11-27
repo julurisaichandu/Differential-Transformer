@@ -56,14 +56,14 @@ class DiffAttn(nn.Module):
         q = self.W_q(query)
         k = self.W_k(key)
         v = self.W_v(value)
-        print(f"Query shape: {q.shape}, Key shape: {k.shape}, Value shape: {v.shape}")
+        #print(f"Query shape: {q.shape}, Key shape: {k.shape}, Value shape: {v.shape}")
         assert q.shape[-1] == k.shape[-1], f"Query and Key dimension mismatch: {q.shape[-1]} vs {k.shape[-1]}"
         scores = torch.matmul(q, k.transpose(-2, -1)) / sqrt(self.d)
         weights = F.softmax(scores, dim=-1)
-        print(f"Scores shape: {scores.shape}, Weights shape: {weights.shape}")
+        #print(f"Scores shape: {scores.shape}, Weights shape: {weights.shape}")
         attended = torch.matmul(weights, v)
         attended = self.W_out(attended)  # Project back to the original embedding dimension
-        print(f"Attended shape after projection: {attended.shape}")
+        #print(f"Attended shape after projection: {attended.shape}")
         return attended
 
 class DifferentialTransformerBlock(nn.Module):
@@ -86,7 +86,7 @@ class DifferentialTransformer(nn.Module):
     def __init__(self, dim: int = 512, heads: int = 8, dropout: float = 0.1, lambda_init: float = 0.8, depth: int = 6, num_tokens: int = 30000):
         super(DifferentialTransformer, self).__init__()
         self.layers = nn.ModuleList([DifferentialTransformerBlock(dim, heads, dropout, lambda_init) for _ in range(depth)])
-        self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim, padding_idx=tokenizer.pad_token_id)
+        self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim, padding_idx=0)
         self.norm = SimpleRMSNorm(dim)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -128,17 +128,17 @@ class DifferentialTransformerMT(nn.Module):
 
     def forward(self, src: Tensor, tgt: Tensor) -> Tensor:
         encoder_output = self.encoder(src)
-        print(f"Encoder output shape: {encoder_output.shape}")
+        #print(f"Encoder output shape: {encoder_output.shape}")
         x = self.norm(self.embed(tgt))
         for i, layer in enumerate(self.decoder_layers):
             x = layer(x, encoder_output)
             print(f"Decoder layer {i} output shape: {x.shape}")
         output = self.output_head(x)
-        print(f"Output shape: {output.shape}")
+        #print(f"Output shape: {output.shape}")
         return output
 
 multi30k = load_dataset('bentrevett/multi30k', split='train')
-print(f"Dataset example: {multi30k[0]}")  # Debug: Print an example to understand the data structure
+print(f"Dataset example: {multi30k[0]}")  # example
 
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
@@ -155,18 +155,17 @@ class Multi30KDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        #Print the keys available in the dataset to ensure there is not issue
-        print(f"Available keys in dataset: {self.dataset[idx].keys()}")
+        #print(f"Available keys in dataset: {self.dataset[idx].keys()}")
         src = self.dataset[idx][self.src_lang]
         tgt = self.dataset[idx][self.tgt_lang]
         if self.tokenizer:
             src_tensor = self.tokenizer(src, return_tensors='pt', padding='max_length', max_length=self.max_len, truncation=True)['input_ids'].squeeze()
             tgt_tensor = self.tokenizer(tgt, return_tensors='pt', padding='max_length', max_length=self.max_len, truncation=True)['input_ids'].squeeze()
-            print("using the dataset")
+            #print("using the dataset")
         else:
             src_tensor = torch.randint(0, 30000, (self.max_len,))
             tgt_tensor = torch.randint(0, 30000, (self.max_len,))
-            print("not using the dataset")
+            #print("not using the dataset")
         return src_tensor, tgt_tensor
 
 dataset = Multi30KDataset(multi30k, tokenizer=tokenizer)
@@ -194,3 +193,30 @@ for epoch in range(5):  # Number of epochs
             print(f"Epoch {epoch+1}, Batch {batch_idx}, Loss: {loss.item()}")
     avg_loss = total_loss / len(dataloader)
     print(f"Epoch {epoch+1}, Average Loss: {avg_loss}")
+
+# Validation  Testing Code
+multi30k_valid = load_dataset('bentrevett/multi30k', split='validation')
+multi30k_test = load_dataset('bentrevett/multi30k', split='test')
+
+valid_dataset = Multi30KDataset(multi30k_valid, tokenizer=tokenizer)
+test_dataset = Multi30KDataset(multi30k_test, tokenizer=tokenizer)
+
+valid_loader = DataLoader(valid_dataset, batch_size=16, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+
+def evaluate_model(model, dataloader, loss_fn, device):
+    model.eval()
+    total_loss = 0
+    with torch.no_grad():
+        for src, tgt in dataloader:
+            src, tgt = src.to(device), tgt.to(device)
+            output = model(src, tgt)
+            loss = loss_fn(output.view(-1, output.size(-1)), tgt.reshape(-1))
+            total_loss += loss.item()
+    return total_loss / len(dataloader)
+
+eval_loss = evaluate_model(model, valid_loader, loss_fn, device)
+print(f"Validation Loss: {eval_loss}")
+
+test_loss = evaluate_model(model, test_loader, loss_fn, device)
+print(f"Test Loss: {test_loss}")
