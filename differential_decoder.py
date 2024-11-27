@@ -6,6 +6,7 @@ from math import sqrt
 import random
 from datasets import load_dataset
 from transformers import AutoTokenizer
+from tqdm import tqdm
 
 
 class SimpleRMSNorm(nn.Module):
@@ -56,14 +57,14 @@ class DiffAttn(nn.Module):
         q = self.W_q(query)
         k = self.W_k(key)
         v = self.W_v(value)
-        #print(f"Query shape: {q.shape}, Key shape: {k.shape}, Value shape: {v.shape}")
+        if batch_idx % 50 == 0: print(f"Query shape: {q.shape}, Key shape: {k.shape}, Value shape: {v.shape}")
         assert q.shape[-1] == k.shape[-1], f"Query and Key dimension mismatch: {q.shape[-1]} vs {k.shape[-1]}"
         scores = torch.matmul(q, k.transpose(-2, -1)) / sqrt(self.d)
         weights = F.softmax(scores, dim=-1)
-        #print(f"Scores shape: {scores.shape}, Weights shape: {weights.shape}")
+        if batch_idx % 50 == 0: print(f"Scores shape: {scores.shape}, Weights shape: {weights.shape}")
         attended = torch.matmul(weights, v)
         attended = self.W_out(attended)  # Project back to the original embedding dimension
-        #print(f"Attended shape after projection: {attended.shape}")
+        if batch_idx % 50 == 0: print(f"Attended shape after projection: {attended.shape}")
         return attended
 
 class DifferentialTransformerBlock(nn.Module):
@@ -128,17 +129,17 @@ class DifferentialTransformerMT(nn.Module):
 
     def forward(self, src: Tensor, tgt: Tensor) -> Tensor:
         encoder_output = self.encoder(src)
-        #print(f"Encoder output shape: {encoder_output.shape}")
+        if batch_idx % 50 == 0: print(f"Encoder output shape: {encoder_output.shape}")
         x = self.norm(self.embed(tgt))
         for i, layer in enumerate(self.decoder_layers):
             x = layer(x, encoder_output)
-            print(f"Decoder layer {i} output shape: {x.shape}")
+            if batch_idx % 50 == 0: print(f"Decoder layer {i} output shape: {x.shape}")
         output = self.output_head(x)
-        #print(f"Output shape: {output.shape}")
+        if batch_idx % 50 == 0: print(f"Output shape: {output.shape}")
         return output
 
 multi30k = load_dataset('bentrevett/multi30k', split='train')
-print(f"Dataset example: {multi30k[0]}")  # example
+print(f"Dataset example: {multi30k[0]}")  # Debug: Print an example to understand the data structure
 
 
 tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
@@ -155,46 +156,49 @@ class Multi30KDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        #print(f"Available keys in dataset: {self.dataset[idx].keys()}")
+        print(f"Available keys in dataset: {self.dataset[idx].keys()}")
         src = self.dataset[idx][self.src_lang]
         tgt = self.dataset[idx][self.tgt_lang]
         if self.tokenizer:
             src_tensor = self.tokenizer(src, return_tensors='pt', padding='max_length', max_length=self.max_len, truncation=True)['input_ids'].squeeze()
             tgt_tensor = self.tokenizer(tgt, return_tensors='pt', padding='max_length', max_length=self.max_len, truncation=True)['input_ids'].squeeze()
-            #print("using the dataset")
+            print("using the dataset")
         else:
             src_tensor = torch.randint(0, 30000, (self.max_len,))
             tgt_tensor = torch.randint(0, 30000, (self.max_len,))
-            #print("not using the dataset")
+            print("not using the dataset")
         return src_tensor, tgt_tensor
 
+# Instantiate the dataset and dataloader
 dataset = Multi30KDataset(multi30k, tokenizer=tokenizer)
 dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
 # Training Loop
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = DifferentialTransformerMT(num_tokens=tokenizer.vocab_size).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 loss_fn = nn.CrossEntropyLoss()
 
 for epoch in range(5):  # Number of epochs
     model.train()
     total_loss = 0
-    for batch_idx, (src, tgt) in enumerate(dataloader):
-        src, tgt = src.to(device), tgt.to(device)
-        optimizer.zero_grad()
-        output = model(src, tgt)  # Predict the next word
-        loss = loss_fn(output.view(-1, output.size(-1)), tgt.reshape(-1))
-        loss.backward()
-        optimizer.step()
+    with tqdm(dataloader, unit="batch") as tepoch:
+        for batch_idx, (src, tgt) in enumerate(tepoch):
+            tepoch.set_description(f"Epoch {epoch+1}")
+            src, tgt = src.to(device), tgt.to(device)
+            optimizer.zero_grad()
+            output = model(src, tgt)  # Predict the next word
+            loss = loss_fn(output.view(-1, output.size(-1)), tgt.reshape(-1))
+            loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
 
-        total_loss += loss.item()
-        if batch_idx % 10 == 0:
-            print(f"Epoch {epoch+1}, Batch {batch_idx}, Loss: {loss.item()}")
+            total_loss += loss.item()
+            tepoch.set_postfix(loss=loss.item())
     avg_loss = total_loss / len(dataloader)
     print(f"Epoch {epoch+1}, Average Loss: {avg_loss}")
 
-# Validation  Testing Code
+# Validation and Testing Code
 multi30k_valid = load_dataset('bentrevett/multi30k', split='validation')
 multi30k_test = load_dataset('bentrevett/multi30k', split='test')
 
@@ -204,17 +208,21 @@ test_dataset = Multi30KDataset(multi30k_test, tokenizer=tokenizer)
 valid_loader = DataLoader(valid_dataset, batch_size=16, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
+# Validation Function
 def evaluate_model(model, dataloader, loss_fn, device):
     model.eval()
     total_loss = 0
     with torch.no_grad():
-        for src, tgt in dataloader:
-            src, tgt = src.to(device), tgt.to(device)
-            output = model(src, tgt)
-            loss = loss_fn(output.view(-1, output.size(-1)), tgt.reshape(-1))
-            total_loss += loss.item()
+        with tqdm(dataloader, unit="batch") as tepoch:
+            for src, tgt in tepoch:
+                src, tgt = src.to(device), tgt.to(device)
+                output = model(src, tgt)
+                loss = loss_fn(output.view(-1, output.size(-1)), tgt.reshape(-1))
+                total_loss += loss.item()
+                tepoch.set_postfix(loss=loss.item())
     return total_loss / len(dataloader)
 
+# Run validation and testing
 eval_loss = evaluate_model(model, valid_loader, loss_fn, device)
 print(f"Validation Loss: {eval_loss}")
 
