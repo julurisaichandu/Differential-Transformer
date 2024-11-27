@@ -4,6 +4,8 @@ from torch import nn, Tensor
 from torch.utils.data import Dataset, DataLoader
 from math import sqrt
 import random
+from datasets import load_dataset
+from transformers import AutoTokenizer
 
 
 class SimpleRMSNorm(nn.Module):
@@ -54,14 +56,14 @@ class DiffAttn(nn.Module):
         q = self.W_q(query)
         k = self.W_k(key)
         v = self.W_v(value)
-        #print(f"Query shape: {q.shape}, Key shape: {k.shape}, Value shape: {v.shape}")
+        print(f"Query shape: {q.shape}, Key shape: {k.shape}, Value shape: {v.shape}")
         assert q.shape[-1] == k.shape[-1], f"Query and Key dimension mismatch: {q.shape[-1]} vs {k.shape[-1]}"
         scores = torch.matmul(q, k.transpose(-2, -1)) / sqrt(self.d)
         weights = F.softmax(scores, dim=-1)
-        #print(f"Scores shape: {scores.shape}, Weights shape: {weights.shape}")
+        print(f"Scores shape: {scores.shape}, Weights shape: {weights.shape}")
         attended = torch.matmul(weights, v)
         attended = self.W_out(attended)  # Project back to the original embedding dimension
-        #print(f"Attended shape after projection: {attended.shape}")
+        print(f"Attended shape after projection: {attended.shape}")
         return attended
 
 class DifferentialTransformerBlock(nn.Module):
@@ -84,7 +86,7 @@ class DifferentialTransformer(nn.Module):
     def __init__(self, dim: int = 512, heads: int = 8, dropout: float = 0.1, lambda_init: float = 0.8, depth: int = 6, num_tokens: int = 30000):
         super(DifferentialTransformer, self).__init__()
         self.layers = nn.ModuleList([DifferentialTransformerBlock(dim, heads, dropout, lambda_init) for _ in range(depth)])
-        self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim)
+        self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim, padding_idx=tokenizer.pad_token_id)
         self.norm = SimpleRMSNorm(dim)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -94,7 +96,6 @@ class DifferentialTransformer(nn.Module):
             assert x.shape[-1] == self.layers[0].attn.d * 8, f"Shape mismatch in layer {i}: expected {self.layers[0].attn.d * 8}, got {x.shape[-1]}"
         return x
 
-# Implementing the Decoder Block
 class DifferentialTransformerDecoderBlock(nn.Module):
     def __init__(self, dim: int, heads: int, dropout: float = 0.1, lambda_init: float = 0.8):
         super(DifferentialTransformerDecoderBlock, self).__init__()
@@ -136,39 +137,48 @@ class DifferentialTransformerMT(nn.Module):
         print(f"Output shape: {output.shape}")
         return output
 
-# Dataset Class for Multi30K-like Data
-class TranslationDataset(Dataset):
-    def __init__(self, src_sentences, tgt_sentences, src_vocab_size=30000, tgt_vocab_size=30000, max_len=30):
-        self.src_sentences = src_sentences
-        self.tgt_sentences = tgt_sentences
-        self.src_vocab_size = src_vocab_size
-        self.tgt_vocab_size = tgt_vocab_size
+multi30k = load_dataset('bentrevett/multi30k', split='train')
+print(f"Dataset example: {multi30k[0]}")  # Debug: Print an example to understand the data structure
+
+
+tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
+
+class Multi30KDataset(Dataset):
+    def __init__(self, dataset, src_lang='en', tgt_lang='de', tokenizer=None, max_len=30):
+        self.dataset = dataset
+        self.src_lang = src_lang
+        self.tgt_lang = tgt_lang
+        self.tokenizer = tokenizer
         self.max_len = max_len
 
     def __len__(self):
-        return len(self.src_sentences)
+        return len(self.dataset)
 
     def __getitem__(self, idx):
-        src = self.src_sentences[idx]
-        tgt = self.tgt_sentences[idx]
-        src_tensor = torch.randint(0, self.src_vocab_size, (self.max_len,))
-        tgt_tensor = torch.randint(0, self.tgt_vocab_size, (self.max_len,))
+        #Print the keys available in the dataset to ensure there is not issue
+        print(f"Available keys in dataset: {self.dataset[idx].keys()}")
+        src = self.dataset[idx][self.src_lang]
+        tgt = self.dataset[idx][self.tgt_lang]
+        if self.tokenizer:
+            src_tensor = self.tokenizer(src, return_tensors='pt', padding='max_length', max_length=self.max_len, truncation=True)['input_ids'].squeeze()
+            tgt_tensor = self.tokenizer(tgt, return_tensors='pt', padding='max_length', max_length=self.max_len, truncation=True)['input_ids'].squeeze()
+            print("using the dataset")
+        else:
+            src_tensor = torch.randint(0, 30000, (self.max_len,))
+            tgt_tensor = torch.randint(0, 30000, (self.max_len,))
+            print("not using the dataset")
         return src_tensor, tgt_tensor
 
-# Generating Sample Data
-src_sentences = ["a photo of a cat", "a man riding a horse", "a group of people playing football"] * 100
-tgt_sentences = ["ein Foto einer Katze", "ein Mann reitet ein Pferd", "eine Gruppe von Menschen spielt Fußball"] * 100
-
-dataset = TranslationDataset(src_sentences, tgt_sentences)
+dataset = Multi30KDataset(multi30k, tokenizer=tokenizer)
 dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
 # Training Loop
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = DifferentialTransformerMT().to(device)
+model = DifferentialTransformerMT(num_tokens=tokenizer.vocab_size).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 loss_fn = nn.CrossEntropyLoss()
 
-for epoch in range(10):  # Number of epochs
+for epoch in range(5):  # Number of epochs
     model.train()
     total_loss = 0
     for batch_idx, (src, tgt) in enumerate(dataloader):
