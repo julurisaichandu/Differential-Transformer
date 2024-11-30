@@ -1,319 +1,386 @@
+# Importing libraries
+
+# PyTorch
 import torch
-import torch.nn.functional as F
-from torch import nn, Tensor
+import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
-from tokenizers import Tokenizer
-from pathlib import Path
-from tqdm import tqdm
-import warnings
-from typing import Any
+from torch.utils.tensorboard import SummaryWriter
+
+# Math
 import math
+
+# HuggingFace libraries 
 from datasets import load_dataset
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from tokenizers.trainers import WordLevelTrainer
+from tokenizers.pre_tokenizers import Whitespace
 
-# Differential Attention Mechanism Implementation
-class SimpleRMSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float = 1e-8):
-        super(SimpleRMSNorm, self).__init__()
-        self.dim = dim
-        self.eps = eps
-        self.scale = nn.Parameter(torch.ones(dim))
+# Pathlib 
+from pathlib import Path
 
-    def forward(self, x: Tensor) -> Tensor:
-        print(f"[SimpleRMSNorm] Input shape: {x.shape}")
-        rms = x.norm(keepdim=True, dim=-1) / torch.sqrt(torch.tensor(self.dim, dtype=torch.float32))
-        result = (x / (rms + self.eps)) * self.scale
-        print(f"[SimpleRMSNorm] Output shape: {result.shape}")
-        return result
+# typing
+from typing import Any
 
+# Library for progress bars in loops
+from tqdm import tqdm
 
-class FeedForward(nn.Module):
-    def __init__(self, dim: int, hidden_dim: int, dropout: float = 0.1):
-        super(FeedForward, self).__init__()
-        self.linear1 = nn.Linear(dim, hidden_dim)
-        self.linear2 = nn.Linear(hidden_dim, dim)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x: Tensor) -> Tensor:
-        print(f"[FeedForward] Input shape: {x.shape}")
-        x = F.gelu(self.linear1(x))
-        x = self.dropout(x)
-        x = self.linear2(x)
-        print(f"[FeedForward] Output shape: {x.shape}")
-        return x
+# Importing library of warnings
+import warnings
 
 
-class DiffAttn(nn.Module):
-    def __init__(self, d: int, embedding_dim: int):
-        super(DiffAttn, self).__init__()
-        self.d = d
-        self.W_q = nn.Linear(embedding_dim, 2 * d)
-        self.W_k = nn.Linear(embedding_dim, 2 * d)
-        self.W_v = nn.Linear(embedding_dim, d)
-        self.lambda_ = nn.Parameter(torch.randn(1))
-        self.lambda_init = 0.05
+# Creating Input Embeddings
+class InputEmbeddings(nn.Module):
 
-    def forward(self, X: Tensor) -> Tensor:
-        print(f"[DiffAttn] Input shape: {X.shape}")
-        Q = self.W_q(X)
-        K = self.W_k(X)
-        V = self.W_v(X)
-        Q1, Q2 = self.split(Q)
-        K1, K2 = self.split(K)
-        s = 1 / math.sqrt(self.d)
-        A1 = (Q1 @ K1.transpose(-1, -2)) * s
-        A2 = (Q2 @ K2.transpose(-1, -2)) * s
-        A1_softmax = F.softmax(A1, dim=-1)
-        A2_softmax = F.softmax(A2, dim=-1)
-        lambda_ = torch.exp(self.lambda_) + self.lambda_init
-        differential_attn = A1_softmax - lambda_ * A2_softmax
-        result = torch.bmm(differential_attn, V)
-        print(f"[DiffAttn] Output shape: {result.shape}")
-        return result
+    def __init__(self, d_model: int, vocab_size: int):
+        super().__init__()
+        self.d_model = d_model  # Dimension of vectors (512)
+        self.vocab_size = vocab_size  # Size of the vocabulary
+        self.embedding = nn.Embedding(vocab_size,
+                                      d_model)  # PyTorch layer that converts integer indices to dense embeddings
 
-    @staticmethod
-    def split(X: Tensor) -> (Tensor, Tensor):
-        half_dim = X.shape[-1] // 2
-        return X[..., :half_dim], X[..., half_dim:]
+    def forward(self, x):
+        return self.embedding(x) * math.sqrt(self.d_model)  # Normalizing the variance of the embeddings
 
 
-class MultiHeadDifferentialAttention(nn.Module):
-    def __init__(self, h: int, d: int, embedding_dim: int, lambda_init: float):
-        super(MultiHeadDifferentialAttention, self).__init__()
-        self.h = h
-        self.d = d
-        self.lambda_init = lambda_init
-        self.embedding_dim = embedding_dim
-        self.diff_attn_heads = nn.ModuleList([DiffAttn(d, embedding_dim) for _ in range(h)])
-        self.W_o = nn.Linear(h * d, embedding_dim)
-        self.norm = nn.LayerNorm(embedding_dim)
-
-    def forward(self, X: Tensor) -> Tensor:
-        print(f"[MultiHeadDifferentialAttention] Input shape: {X.shape}")
-        O_list = [head(X) for head in self.diff_attn_heads]
-        O_concat = torch.cat(O_list, dim=-1)
-        result = self.W_o(O_concat)
-        result = self.norm(result)
-        result = result * (1 - self.lambda_init)
-        print(f"[MultiHeadDifferentialAttention] Output shape: {result.shape}")
-        return result
-
-
+# Creating the Positional Encoding
 class PositionalEncoding(nn.Module):
+
     def __init__(self, d_model: int, seq_len: int, dropout: float) -> None:
         super().__init__()
-        self.d_model = d_model
-        self.seq_len = seq_len
-        self.dropout = nn.Dropout(dropout)
+        self.d_model = d_model  # Dimensionality of the model
+        self.seq_len = seq_len  # Maximum sequence length
+        self.dropout = nn.Dropout(dropout)  # Dropout layer to prevent overfitting
+
+        # Creating a positional encoding matrix of shape (seq_len, d_model) filled with zeros
         pe = torch.zeros(seq_len, d_model)
-        position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
+
+        # Creating a tensor representing positions (0 to seq_len - 1)
+        position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(
+            1)  # Transforming 'position' into a 2D tensor['seq_len, 1']
+
+        # Creating the division term for the positional encoding formula
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+
+        # Apply sine to even indices in pe
         pe[:, 0::2] = torch.sin(position * div_term)
+        # Apply cosine to odd indices in pe
         pe[:, 1::2] = torch.cos(position * div_term)
+
+        # Adding an extra dimension at the beginning of pe matrix for batch handling
         pe = pe.unsqueeze(0)
+
+        # Registering 'pe' as buffer. Buffer is a tensor not considered as a model parameter
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        print(f"[PositionalEncoding] Input shape: {x.shape}")
+        # Addind positional encoding to the input tensor X
         x = x + (self.pe[:, :x.shape[1], :]).requires_grad_(False)
-        x = self.dropout(x)
-        print(f"[PositionalEncoding] Output shape: {x.shape}")
+        return self.dropout(x)  # Dropout for regularization
+
+
+# Creating Layer Normalization
+class LayerNormalization(nn.Module):
+
+    def __init__(self, eps: float = 10 ** -6) -> None:  # We define epsilon as 0.000001 to avoid division by zero
+        super().__init__()
+        self.eps = eps
+
+        # We define alpha as a trainable parameter and initialize it with ones
+        self.alpha = nn.Parameter(torch.ones(1))  # One-dimensional tensor that will be used to scale the input data
+
+        # We define bias as a trainable parameter and initialize it with zeros
+        self.bias = nn.Parameter(torch.zeros(1))  # One-dimensional tenso that will be added to the input data
+
+    def forward(self, x):
+        mean = x.mean(dim=-1,
+                      keepdim=True)  # Computing the mean of the input data. Keeping the number of dimensions unchanged
+        std = x.std(dim=-1,
+                    keepdim=True)  # Computing the standard deviation of the input data. Keeping the number of dimensions unchanged
+
+        # Returning the normalized input
+        return self.alpha * (x - mean) / (std + self.eps) + self.bias
+
+
+# Creating Feed Forward Layers
+class FeedForwardBlock(nn.Module):
+
+    def __init__(self, d_model: int, d_ff: int, dropout: float) -> None:
+        super().__init__()
+        # First linear transformation
+        self.linear_1 = nn.Linear(d_model, d_ff)  # W1 & b1
+        self.dropout = nn.Dropout(dropout)  # Dropout to prevent overfitting
+        # Second linear transformation
+        self.linear_2 = nn.Linear(d_ff, d_model)  # W2 & b2
+
+    def forward(self, x):
+        # (Batch, seq_len, d_model) --> (batch, seq_len, d_ff) -->(batch, seq_len, d_model)
+        return self.linear_2(self.dropout(torch.relu(self.linear_1(x))))
+
+
+# Creating the Multi-Head Attention block
+class MultiHeadAttentionBlock(nn.Module):
+
+    def __init__(self, d_model: int, h: int, dropout: float) -> None:  # h = number of heads
+        super().__init__()
+        self.d_model = d_model
+        self.h = h
+
+        # We ensure that the dimensions of the model is divisible by the number of heads
+        assert d_model % h == 0, 'd_model is not divisible by h'
+
+        # d_k is the dimension of each attention head's key, query, and value vectors
+        self.d_k = d_model // h  # d_k formula, like in the original "Attention Is All You Need" paper
+
+        # Defining the weight matrices
+        self.w_q = nn.Linear(d_model, d_model)  # W_q
+        self.w_k = nn.Linear(d_model, d_model)  # W_k
+        self.w_v = nn.Linear(d_model, d_model)  # W_v
+        self.w_o = nn.Linear(d_model, d_model)  # W_o
+
+        self.dropout = nn.Dropout(dropout)  # Dropout layer to avoid overfitting
+
+    @staticmethod
+    def attention(query, key, value, mask,
+                  dropout: nn.Dropout):  # mask => When we want certain words to NOT interact with others, we "hide" them
+
+        d_k = query.shape[-1]  # The last dimension of query, key, and value
+
+        # We calculate the Attention(Q,K,V) as in the formula in the image above
+        attention_scores = (query @ key.transpose(-2, -1)) / math.sqrt(d_k)  # @ = Matrix multiplication sign in PyTorch
+
+        # Before applying the softmax, we apply the mask to hide some interactions between words
+        if mask is not None:  # If a mask IS defined...
+            attention_scores.masked_fill_(mask == 0, -1e9)  # Replace each value where mask is equal to 0 by -1e9
+        attention_scores = attention_scores.softmax(dim=-1)  # Applying softmax
+        if dropout is not None:  # If a dropout IS defined...
+            attention_scores = dropout(attention_scores)  # We apply dropout to prevent overfitting
+
+        return (
+                    attention_scores @ value), attention_scores  # Multiply the output matrix by the V matrix, as in the formula
+
+    def forward(self, q, k, v, mask):
+
+        query = self.w_q(q)  # Q' matrix
+        key = self.w_k(k)  # K' matrix
+        value = self.w_v(v)  # V' matrix
+
+        # Splitting results into smaller matrices for the different heads
+        # Splitting embeddings (third dimension) into h parts
+        query = query.view(query.shape[0], query.shape[1], self.h, self.d_k).transpose(1,
+                                                                                       2)  # Transpose => bring the head to the second dimension
+        key = key.view(key.shape[0], key.shape[1], self.h, self.d_k).transpose(1,
+                                                                               2)  # Transpose => bring the head to the second dimension
+        value = value.view(value.shape[0], value.shape[1], self.h, self.d_k).transpose(1,
+                                                                                       2)  # Transpose => bring the head to the second dimension
+
+        # Obtaining the output and the attention scores
+        x, self.attention_scores = MultiHeadAttentionBlock.attention(query, key, value, mask, self.dropout)
+
+        # Obtaining the H matrix
+        x = x.transpose(1, 2).contiguous().view(x.shape[0], -1, self.h * self.d_k)
+
+        return self.w_o(x)  # Multiply the H matrix by the weight matrix W_o, resulting in the MH-A matrix
+
+
+# Building Residual Connection
+class ResidualConnection(nn.Module):
+    def __init__(self, dropout: float) -> None:
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)  # We use a dropout layer to prevent overfitting
+        self.norm = LayerNormalization()  # We use a normalization layer
+
+    def forward(self, x, sublayer):
+        # We normalize the input and add it to the original input 'x'. This creates the residual connection process.
+        return x + self.dropout(sublayer(self.norm(x)))
+
+    # Building Encoder Block
+
+
+class EncoderBlock(nn.Module):
+
+    # This block takes in the MultiHeadAttentionBlock and FeedForwardBlock, as well as the dropout rate for the residual connections
+    def __init__(self, self_attention_block: MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock,
+                 dropout: float) -> None:
+        super().__init__()
+        # Storing the self-attention block and feed-forward block
+        self.self_attention_block = self_attention_block
+        self.feed_forward_block = feed_forward_block
+        self.residual_connections = nn.ModuleList(
+            [ResidualConnection(dropout) for _ in range(2)])  # 2 Residual Connections with dropout
+
+    def forward(self, x, src_mask):
+        # Applying the first residual connection with the self-attention block
+        x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x,
+                                                                                src_mask))  # Three 'x's corresponding to query, key, and value inputs plus source mask
+
+        # Applying the second residual connection with the feed-forward block
+        x = self.residual_connections[1](x, self.feed_forward_block)
+        return x  # Output tensor after applying self-attention and feed-forward layers with residual connections.
+
+
+# Building Encoder
+# An Encoder can have several Encoder Blocks
+class Encoder(nn.Module):
+
+    # The Encoder takes in instances of 'EncoderBlock'
+    def __init__(self, layers: nn.ModuleList) -> None:
+        super().__init__()
+        self.layers = layers  # Storing the EncoderBlocks
+        self.norm = LayerNormalization()  # Layer for the normalization of the output of the encoder layers
+
+    def forward(self, x, mask):
+        # Iterating over each EncoderBlock stored in self.layers
+        for layer in self.layers:
+            x = layer(x, mask)  # Applying each EncoderBlock to the input tensor 'x'
+        return self.norm(x)  # Normalizing output
+
+
+# Building Decoder Block
+class DecoderBlock(nn.Module):
+
+    # The DecoderBlock takes in two MultiHeadAttentionBlock. One is self-attention, while the other is cross-attention.
+    # It also takes in the feed-forward block and the dropout rate
+    def __init__(self, self_attention_block: MultiHeadAttentionBlock, cross_attention_block: MultiHeadAttentionBlock,
+                 feed_forward_block: FeedForwardBlock, dropout: float) -> None:
+        super().__init__()
+        self.self_attention_block = self_attention_block
+        self.cross_attention_block = cross_attention_block
+        self.feed_forward_block = feed_forward_block
+        self.residual_connections = nn.ModuleList(
+            [ResidualConnection(dropout) for _ in range(3)])  # List of three Residual Connections with dropout rate
+
+    def forward(self, x, encoder_output, src_mask, tgt_mask):
+        # Self-Attention block with query, key, and value plus the target language mask
+        x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x, tgt_mask))
+
+        # The Cross-Attention block using two 'encoder_ouput's for key and value plus the source language mask. It also takes in 'x' for Decoder queries
+        x = self.residual_connections[1](x, lambda x: self.cross_attention_block(x, encoder_output, encoder_output,
+                                                                                 src_mask))
+
+        # Feed-forward block with residual connections
+        x = self.residual_connections[2](x, self.feed_forward_block)
         return x
 
 
-class DifferentialTransformerBlock(nn.Module):
-    def __init__(self, dim: int, heads: int = 12, dropout: float = 0.1, lambda_init: float = 0.05):
-        super(DifferentialTransformerBlock, self).__init__()
-        self.dim = dim
-        self.heads = heads
-        self.dropout = dropout
-        self.lambda_init = lambda_init
+# Building Decoder
+# A Decoder can have several Decoder Blocks
+class Decoder(nn.Module):
 
-        self.attn = MultiHeadDifferentialAttention(heads, dim, dim, lambda_init)
-        self.ffn = FeedForward(dim, dim * 4, dropout)
-        self.norm = SimpleRMSNorm(dim)
+    # The Decoder takes in instances of 'DecoderBlock'
+    def __init__(self, layers: nn.ModuleList) -> None:
+        super().__init__()
 
-    def forward(self, x: Tensor) -> Tensor:
-        print(f"[DifferentialTransformerBlock] Input shape: {x.shape}")
-        residual = x
-        attended = self.attn(self.norm(x)) + residual
-        residual_two = attended
-        attended = self.attn(self.norm(residual_two)) + residual_two
-        print(f"[DifferentialTransformerBlock] Output shape: {attended.shape}")
-        return attended
+        # Storing the 'DecoderBlock's
+        self.layers = layers
+        self.norm = LayerNormalization()  # Layer to normalize the output
 
-
-class DifferentialTransformer(nn.Module):
-    def __init__(self, dim: int = 512, heads: int = 8, dropout: float = 0.1, lambda_init: float = 0.05, depth: int = 6, num_tokens: int = 30000, seq_len: int = 350):
-        super(DifferentialTransformer, self).__init__()
-        self.dim = dim
-        self.heads = heads
-        self.dropout = dropout
-        self.lambda_init = lambda_init
-        self.depth = depth
-        self.num_tokens = num_tokens
-        self.seq_len = seq_len
-
-        self.layers = nn.ModuleList([DifferentialTransformerBlock(dim, heads, dropout, lambda_init) for _ in range(depth)])
-        self.embed = nn.Embedding(num_embeddings=num_tokens, embedding_dim=dim)
-        self.norm = SimpleRMSNorm(dim)
-        self.pos_encoding = PositionalEncoding(dim, seq_len, dropout)
-        self.output_head = OutputHead(dim, num_tokens)
-
-    def forward(self, x):
-        print(f"[DifferentialTransformer] Input shape: {x.shape}")
-        x = self.norm(self.embed(x))
-        x = self.pos_encoding(x)
+    def forward(self, x, encoder_output, src_mask, tgt_mask):
+        # Iterating over each DecoderBlock stored in self.layers
         for layer in self.layers:
-            x = layer(x)
-        output = self.output_head(x)
-        print(f"[DifferentialTransformer] Output shape: {output.shape}")
-        return output
+            # Applies each DecoderBlock to the input 'x' plus the encoder output and source and target masks
+            x = layer(x, encoder_output, src_mask, tgt_mask)
+        return self.norm(x)  # Returns normalized output
 
-
-class OutputHead(nn.Module):
-    def __init__(self, dim, num_tokens):
+# Buiding Linear Layer
+class ProjectionLayer(nn.Module):
+    def __init__(self, d_model: int, vocab_size: int) -> None: # Model dimension and the size of the output vocabulary
         super().__init__()
-        self.linear = nn.Linear(dim, num_tokens)
-
+        self.proj = nn.Linear(d_model, vocab_size) # Linear layer for projecting the feature space of 'd_model' to the output space of 'vocab_size'
     def forward(self, x):
-        print(f"[OutputHead] Input shape: {x.shape}")
-        result = self.linear(x)
-        print(f"[OutputHead] Output shape: {result.shape}")
-        return result
+        return torch.log_softmax(self.proj(x), dim = -1) # Applying the log Softmax function to the output
 
 
-# Data Preparation and Loading
-class BilingualDataset(Dataset):
-    def __init__(self, ds, tokenizer_src, tokenizer_tgt, src_lang, tgt_lang, seq_len) -> None:
+# Creating the Transformer Architecture
+class Transformer(nn.Module):
+
+    # This takes in the encoder and decoder, as well the embeddings for the source and target language.
+    # It also takes in the Positional Encoding for the source and target language, as well as the projection layer
+    def __init__(self, encoder: Encoder, decoder: Decoder, src_embed: InputEmbeddings, tgt_embed: InputEmbeddings,
+                 src_pos: PositionalEncoding, tgt_pos: PositionalEncoding, projection_layer: ProjectionLayer) -> None:
         super().__init__()
-        self.seq_len = seq_len
-        self.ds = ds
-        self.tokenizer_src = tokenizer_src
-        self.tokenizer_tgt = tokenizer_tgt
-        self.src_lang = src_lang
-        self.tgt_lang = tgt_lang
-        self.sos_token = torch.tensor([tokenizer_tgt.token_to_id("[SOS]")], dtype=torch.int64)
-        self.eos_token = torch.tensor([tokenizer_tgt.token_to_id("[EOS]")], dtype=torch.int64)
-        self.pad_token = torch.tensor([tokenizer_tgt.token_to_id("[PAD]")], dtype=torch.int64)
+        self.encoder = encoder
+        self.decoder = decoder
+        self.src_embed = src_embed
+        self.tgt_embed = tgt_embed
+        self.src_pos = src_pos
+        self.tgt_pos = tgt_pos
+        self.projection_layer = projection_layer
 
-    def __len__(self):
-        return len(self.ds)
+    # Encoder
+    def encode(self, src, src_mask):
+        src = self.src_embed(src)  # Applying source embeddings to the input source language
+        src = self.src_pos(src)  # Applying source positional encoding to the source embeddings
+        return self.encoder(src,
+                            src_mask)  # Returning the source embeddings plus a source mask to prevent attention to certain elements
 
-    def __getitem__(self, index: Any) -> Any:
-        src_target_pair = self.ds[index]
-        src_text = src_target_pair['translation'][self.src_lang]
-        tgt_text = src_target_pair['translation'][self.tgt_lang]
-        enc_input_tokens = self.tokenizer_src.encode(src_text).ids
-        dec_input_tokens = self.tokenizer_tgt.encode(tgt_text).ids
-        enc_num_padding_tokens = self.seq_len - len(enc_input_tokens) - 2
-        dec_num_padding_tokens = self.seq_len - len(dec_input_tokens) - 1
+    # Decoder
+    def decode(self, encoder_output, src_mask, tgt, tgt_mask):
+        tgt = self.tgt_embed(tgt)  # Applying target embeddings to the input target language (tgt)
+        tgt = self.tgt_pos(tgt)  # Applying target positional encoding to the target embeddings
 
-        if enc_num_padding_tokens < 0 or dec_num_padding_tokens < 0:
-            raise ValueError('Sentence is too long')
-        encoder_input = torch.cat([
-            self.sos_token,
-            torch.tensor(enc_input_tokens, dtype=torch.int64),
-            self.eos_token,
-            torch.tensor([self.pad_token] * enc_num_padding_tokens, dtype=torch.int64)
-        ])
-        decoder_input = torch.cat([
-            self.sos_token,
-            torch.tensor(dec_input_tokens, dtype=torch.int64),
-            torch.tensor([self.pad_token] * dec_num_padding_tokens, dtype=torch.int64)
-        ])
-        label = torch.cat([
-            torch.tensor(dec_input_tokens, dtype=torch.int64),
-            self.eos_token,
-            torch.tensor([self.pad_token] * dec_num_padding_tokens, dtype=torch.int64)
-        ])
-        return {
-            'encoder_input': encoder_input,
-            'decoder_input': decoder_input,
-            'label': label,
-            'src_text': src_text,
-            'tgt_text': tgt_text
-        }
+        # Returning the target embeddings, the output of the encoder, and both source and target masks
+        # The target mask ensures that the model won't 'see' future elements of the sequence
+        return self.decoder(tgt, encoder_output, src_mask, tgt_mask)
+
+    # Applying Projection Layer with the Softmax function to the Decoder output
+    def project(self, x):
+        return self.projection_layer(x)
 
 
-# Assuming the training and model instantiation logic follows
-warnings.filterwarnings('ignore')
-config = {
-    'batch_size': 8,
-    'num_epochs': 3,
-    'lr': 1e-4,
-    'seq_len': 350,
-    'd_model': 512,
-    'lang_src': 'en',
-    'lang_tgt': 'it',
-    'model_folder': 'weights',
-    'model_basename': 'tmodel_',
-    'preload': None,
-    'tokenizer_file': 'tokenizer_{0}.json',
-    'experiment_name': 'runs/tmodel'
-}
+# Building & Initializing Transformer
 
-# Train and Validate the Model
-def train_model(config):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
+# Definin function and its parameter, including model dimension, number of encoder and decoder stacks, heads, etc.
+def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int, tgt_seq_len: int, d_model: int = 512,
+                      N: int = 6, h: int = 8, dropout: float = 0.1, d_ff: int = 2048) -> Transformer:
+    # Creating Embedding layers
+    src_embed = InputEmbeddings(d_model,
+                                src_vocab_size)  # Source language (Source Vocabulary to 512-dimensional vectors)
+    tgt_embed = InputEmbeddings(d_model,
+                                tgt_vocab_size)  # Target language (Target Vocabulary to 512-dimensional vectors)
 
-    # Load dataset and split
-    ds_raw = load_dataset('opus_books', f"{config['lang_src']}-{config['lang_tgt']}", split='train')
-    train_ds_size = int(0.9 * len(ds_raw))
-    val_ds_size = len(ds_raw) - train_ds_size
-    train_ds_raw, val_ds_raw = random_split(ds_raw, [train_ds_size, val_ds_size])
+    # Creating Positional Encoding layers
+    src_pos = PositionalEncoding(d_model, src_seq_len,
+                                 dropout)  # Positional encoding for the source language embeddings
+    tgt_pos = PositionalEncoding(d_model, tgt_seq_len,
+                                 dropout)  # Positional encoding for the target language embeddings
 
-    # Tokenizer loading and dataset preparation
-    tokenizer_src = Tokenizer.from_file(config['tokenizer_file'].format(config['lang_src']))
-    tokenizer_tgt = Tokenizer.from_file(config['tokenizer_file'].format(config['lang_tgt']))
+    # Creating EncoderBlocks
+    encoder_blocks = []  # Initial list of empty EncoderBlocks
+    for _ in range(N):  # Iterating 'N' times to create 'N' EncoderBlocks (N = 6)
+        encoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)  # Self-Attention
+        feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout)  # FeedForward
 
-    train_ds = BilingualDataset(train_ds_raw, tokenizer_src, tokenizer_tgt, config['lang_src'], config['lang_tgt'], config['seq_len'])
-    val_ds = BilingualDataset(val_ds_raw, tokenizer_src, tokenizer_tgt, config['lang_src'], config['lang_tgt'], config['seq_len'])
+        # Combine layers into an EncoderBlock
+        encoder_block = EncoderBlock(encoder_self_attention_block, feed_forward_block, dropout)
+        encoder_blocks.append(encoder_block)  # Appending EncoderBlock to the list of EncoderBlocks
 
-    train_dataloader = DataLoader(train_ds, batch_size=config['batch_size'], shuffle=True)
-    val_dataloader = DataLoader(val_ds, batch_size=config['batch_size'])
+    # Creating DecoderBlocks
+    decoder_blocks = []  # Initial list of empty DecoderBlocks
+    for _ in range(N):  # Iterating 'N' times to create 'N' DecoderBlocks (N = 6)
+        decoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)  # Self-Attention
+        decoder_cross_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)  # Cross-Attention
+        feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout)  # FeedForward
 
-    model = DifferentialTransformer(dim=config['d_model'], heads=8, dropout=0.1, lambda_init=0.05, depth=6, num_tokens=tokenizer_tgt.get_vocab_size(), seq_len=config['seq_len']).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'])
-    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_tgt.token_to_id("[PAD]"))
+        # Combining layers into a DecoderBlock
+        decoder_block = DecoderBlock(decoder_self_attention_block, decoder_cross_attention_block, feed_forward_block,
+                                     dropout)
+        decoder_blocks.append(decoder_block)  # Appending DecoderBlock to the list of DecoderBlocks
 
-    for epoch in range(config['num_epochs']):
-        model.train()
-        train_loss = 0.0
-        train_iterator = tqdm(train_dataloader, desc=f"Training Epoch {epoch+1}/{config['num_epochs']}")
+    # Creating the Encoder and Decoder by using the EncoderBlocks and DecoderBlocks lists
+    encoder = Encoder(nn.ModuleList(encoder_blocks))
+    decoder = Decoder(nn.ModuleList(decoder_blocks))
 
-        for batch in train_iterator:
-            optimizer.zero_grad()
-            encoder_input = batch['encoder_input'].to(device)
-            decoder_input = batch['decoder_input'].to(device)
-            labels = batch['label'].to(device)
+    # Creating projection layer
+    projection_layer = ProjectionLayer(d_model,
+                                       tgt_vocab_size)  # Map the output of Decoder to the Target Vocabulary Space
 
-            output = model(encoder_input)
-            output = output.reshape(-1, output.shape[-1])
-            labels = labels.reshape(-1)
-            loss = loss_fn(output, labels)
-            loss.backward()
-            optimizer.step()
+    # Creating the transformer by combining everything above
+    transformer = Transformer(encoder, decoder, src_embed, tgt_embed, src_pos, tgt_pos, projection_layer)
 
-            train_loss += loss.item()
-            train_iterator.set_postfix(loss=(train_loss / len(train_iterator)))
+    # Initialize the parameters
+    for p in transformer.parameters():
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)
 
-        # Validation
-        model.eval()
-        val_loss = 0.0
-        val_iterator = tqdm(val_dataloader, desc=f"Validation Epoch {epoch+1}/{config['num_epochs']}")
-        with torch.no_grad():
-            for batch in val_iterator:
-                encoder_input = batch['encoder_input'].to(device)
-                decoder_input = batch['decoder_input'].to(device)
-                labels = batch['label'].to(device)
-
-                output = model(encoder_input)
-                output = output.reshape(-1, output.shape[-1])
-                labels = labels.reshape(-1)
-                loss = loss_fn(output, labels)
-
-                val_loss += loss.item()
-                val_iterator.set_postfix(loss=(val_loss / len(val_iterator)))
-
-train_model(config)
+    return transformer  # Assembled and initialized Transformer. Ready to be trained and validated!
