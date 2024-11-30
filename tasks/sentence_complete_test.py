@@ -71,7 +71,7 @@ class SentencePredictor:
 
 def test_model():
     try:
-        tokenizer = Tokenizer.from_file("tokenizer.json")
+        tokenizer = Tokenizer.from_file("../tokenizer.json")
     except Exception as e:
         print(f"Error loading tokenizer: {str(e)}")
         return
