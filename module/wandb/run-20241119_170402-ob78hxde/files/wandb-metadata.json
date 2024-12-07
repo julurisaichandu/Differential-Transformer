@@ -1,0 +1,36 @@
+{
+    "os": "macOS-14.6.1-arm64-arm-64bit",
+    "python": "3.10.9",
+    "heartbeatAt": "2024-11-19T22:04:05.496607",
+    "startedAt": "2024-11-19T22:04:02.482278",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "<python with no main file>",
+    "codePathLocal": null,
+    "git": {
+        "remote": "https://github.com/SteveMama/Differential-Transformer.git",
+        "commit": "97889f33cf97834a0e57848ea9bbbb040a8371af"
+    },
+    "email": "pkompally@gmail.com",
+    "root": "/Users/stevemama/diff-transformer",
+    "host": "Pranavs-MacBook-Pro.local",
+    "username": "stevemama",
+    "executable": "/Users/stevemama/anaconda3/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "disk": {
+        "/": {
+            "total": 460.4317207336426,
+            "used": 443.47094345092773
+        }
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 8.0
+    }
+}

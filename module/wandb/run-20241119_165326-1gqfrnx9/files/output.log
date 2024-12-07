@@ -1,0 +1,153 @@
+
+Loading dataset...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Downloading data: 100%|██████████| 252M/252M [00:41<00:00, 6.10MB/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Downloading data: 100%|██████████| 241M/241M [00:52<00:00, 4.57MB/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Downloading data: 100%|██████████| 243M/243M [00:50<00:00, 4.86MB/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Downloading data: 100%|██████████| 247M/247M [00:46<00:00, 5.29MB/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Downloading data: 100%|██████████| 242M/242M [00:44<00:00, 5.43MB/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Downloading data: 100%|██████████| 238M/238M [00:48<00:00, 4.87MB/s]
+Downloading data:   0%|          | 0.00/240M [00:00<?, ?B/s]
+<xml><var name="_dummy_ipython_val"  />
+<var name="_dummy_special_var"  />
+<var name="dataset" type="DatasetDict" qualifier="datasets.dataset_dict" value="DatasetDict%28%7B%0A    train%3A Dataset%28%7B%0A        features%3A %5B%27translation%27%5D%2C%0A        num_rows%3A 206112%0A    %7D%29%0A    test%3A Dataset%28%7B%0A    ...n%27%5D%2C%0A        num_rows%3A 8079%0A    %7D%29%0A    validation%3A Dataset%28%7B%0A        features%3A %5B%27translation%27%5D%2C%0A        num_rows%3A 888%0A    %7D%29%0A%7D%29" isContainer="True" shape="('train', 'test', 'validation')" />
+<var name="model" type="DifferentialTransformer" qualifier="Diff_Transformer" value="DifferentialTransformer%28%0A  %28token_embedding%29%3A Embedding%2858101%2C 3072%29%0A  %28position_embedding%29%3A Embedding%284096%2C 3072%29%0A  %28layers%29%3A...%29%3A LayerNorm%28%283072%2C%29%2C eps=1e-05%2C elementwise_affine=False%29%0A  %28head%29%3A Linear%28in_features=3072%2C out_features=58101%2C bias=False%29%0A%29" isContainer="True" />
+<var name="num_classes" type="int" qualifier="builtins" value="58101" />
+<var name="tokenizer" type="MarianTokenizer" qualifier="transformers.models.marian.tokenization_marian" value="MarianTokenizer%28name_or_path=%27Helsinki-NLP/opus-mt-en-de%27%2C vocab_size=58101%2C model_max_length=512%2C is_fast=False%2C padding_side...e%2C special=True%29%2C%0A%0958100%3A AddedToken%28%22%3Cpad&gt;%22%2C rstrip=False%2C lstrip=False%2C single_word=False%2C normalized=False%2C special=True%29%2C%0A%7D" isContainer="True" shape="58101" />
+<var name="train_dataset" type="TranslationDataset" qualifier="__main__" value="%3C__main__.TranslationDataset object at 0x1790c6ec0&gt;" isContainer="True" shape="206112" />
+<var name="train_loader" type="DataLoader" qualifier="torch.utils.data.dataloader" value="%3Ctorch.utils.data.dataloader.DataLoader object at 0x17915e080&gt;" isContainer="True" shape="6441" />
+<var name="val_dataset" type="TranslationDataset" qualifier="__main__" value="%3C__main__.TranslationDataset object at 0x456002830&gt;" isContainer="True" shape="888" />
+<var name="val_loader" type="DataLoader" qualifier="torch.utils.data.dataloader" value="%3Ctorch.utils.data.dataloader.DataLoader object at 0x43001f4f0&gt;" isContainer="True" shape="28" />
+<var name="vocab_size" type="int" qualifier="builtins" value="58101" />
+</xml>

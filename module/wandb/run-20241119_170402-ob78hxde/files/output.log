@@ -1,0 +1,33 @@
+
+Loading dataset...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Downloading data: 100%|██████████| 168M/168M [01:19<00:00, 2.11MB/s]
+Downloading data: 100%|██████████| 473k/473k [00:00<00:00, 1.04MB/s]
+Downloading data: 100%|██████████| 507k/507k [00:00<00:00, 1.34MB/s]
+Training on 100000 examples
+Validating on 1000 examples
+Loading tokenizer...
+Initializing model...
+/Users/stevemama/anaconda3/lib/python3.10/site-packages/transformers/models/marian/tokenization_marian.py:197: UserWarning: Recommended: pip install sacremoses.
+  warnings.warn("Recommended: pip install sacremoses.")
+Starting training...
+An error occurred: 'en'

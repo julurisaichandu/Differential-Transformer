@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/module/wandb/run-20241119_165031-0fb0biyx/tmp" />
+      <excludeFolder url="file://$MODULE_DIR$/module/wandb/run-20241119_165326-1gqfrnx9/tmp" />
+      <excludeFolder url="file://$MODULE_DIR$/module/wandb/run-20241119_165934-09gx6k1l/tmp" />
+      <excludeFolder url="file://$MODULE_DIR$/module/wandb/run-20241119_170402-ob78hxde/tmp" />
+      <excludeFolder url="file://$MODULE_DIR$/module/wandb/run-20241119_171054-vtf1yhu2/tmp" />
+    </content>
     <orderEntry type="jdk" jdkName="$USER_HOME$/anaconda3" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

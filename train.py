@@ -4,7 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 from datasets import load_dataset
-from Diff_Transformer import DifferentialTransformer
+from module.Diff_Transformer import DifferentialTransformer
 from tqdm import tqdm
 
 # Hyperparameters

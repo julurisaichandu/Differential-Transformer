@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from RMSNorm import RMSNorm
-from diff_layer import DifferentialTransformerLayer
+from module.RMSNorm import RMSNorm
+from module.diff_layer import DifferentialTransformerLayer
 from transformers import AutoTokenizer
 from datasets import load_dataset
 from tqdm import tqdm
